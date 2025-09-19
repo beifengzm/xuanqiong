@@ -1,0 +1,1 @@
+/usr/bin/c++  -g3 CMakeFiles/echo_server.dir/echo_server.cc.o -o echo_server  ../net/libnet.a ../server/librpc_server.a -lpthread 

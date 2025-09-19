@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 
 #include "net/socket_utils.h"
 #include "base/common.h"
@@ -35,8 +36,12 @@ void SocketUtils::listen(int sockfd, int backlog) {
 
 int SocketUtils::accept(int sockfd, struct sockaddr* addr, socklen_t* addrlen) {
     int client_fd;
-    if ((client_fd = ::accept4(sockfd, addr, addrlen, SOCK_CLOEXEC)) < 0) {
+    if ((client_fd = ::accept(sockfd, addr, addrlen)) < 0) {
         error("accept4 failed: {}", strerror(errno));
+    }
+    if (::fcntl(client_fd, F_SETFD, FD_CLOEXEC) == -1) {
+        ::close(client_fd);
+        return -1;
     }
     return client_fd;
 }
@@ -49,7 +54,7 @@ void SocketUtils::inet_pton(int af, const char *src, void *dst) {
 }
 
 int SocketUtils::connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
-    int ret = ::connect(sockfd, addr, addrlen)
+    int ret = ::connect(sockfd, addr, addrlen);
     if (ret < 0) {
         error("connect failed: {}", strerror(errno));
     }

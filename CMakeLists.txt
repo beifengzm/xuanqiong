@@ -18,4 +18,5 @@ include_directories(${CMAKE_SOURCE_DIR}/third_party)
 
 add_subdirectory(net)
 add_subdirectory(server)
+add_subdirectory(client)
 add_subdirectory(example)

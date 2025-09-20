@@ -1,3 +1,5 @@
+#pragma once
+
 // #include "spdlog/spdlog.h"
 
 // using spdlog::info;

@@ -57,6 +57,8 @@ int SocketUtils::connect(int sockfd, const struct sockaddr *addr, socklen_t addr
     int ret = ::connect(sockfd, addr, addrlen);
     if (ret < 0) {
         error("connect failed: {}", strerror(errno));
+        close(sockfd);
+        exit(EXIT_FAILURE);
     }
     return ret;
 }

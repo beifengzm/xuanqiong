@@ -21,8 +21,13 @@ void RpcServer::start() {
             }
             continue;
         }
+
+        struct sockaddr_in addr;
+        socklen_t addrlen = sizeof(addr);
+        auto ip = getsockname(connfd, (struct sockaddr*)&addr, &addrlen);
+        auto port = ntohs(addr.sin_port);
+        info("accept new connection, ip: {} port: {}", inet_ntoa(addr.sin_addr), port);
     }
 }
-
 
 } // namespace xuanqiong

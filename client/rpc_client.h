@@ -4,12 +4,18 @@
 
 namespace xuanqiong {
 
+namespace base {
+class IOBuf;
+}
+
 class RpcClient {
 public:
     RpcClient(const std::string& ip, int port);
     ~RpcClient() = default;
 
-    int connect();
+    void connect();
+
+    int send(const util::IOBuf& iobuf);
 
 private:
     std::string ip_;

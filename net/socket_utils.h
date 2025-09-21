@@ -18,6 +18,8 @@ public:
 
     static int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 
+    static int send(int sockfd, const void* buf, size_t len);
+
     static void setsocketopt(int sockfd, int level, int optname, const void* optval, socklen_t optlen);
 };
 

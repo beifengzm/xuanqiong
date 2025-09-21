@@ -2,7 +2,7 @@
 
 using namespace xuanqiong;
 
-int main(int argc, char* argv[]) {
+int main() {
     RpcServerOptions options(8888);
     RpcServer rpc_server(options);
     rpc_server.start();

@@ -1,9 +1,11 @@
 
 #include <string.h>
+#include <fcntl.h>
 
-#include "base/common.h"
+#include "util/common.h"
 #include "server/rpc_server.h"
 #include "net/socket_utils.h"
+#include "server/server_task.h"
 
 namespace xuanqiong {
 
@@ -24,9 +26,13 @@ void RpcServer::start() {
 
         struct sockaddr_in addr;
         socklen_t addrlen = sizeof(addr);
-        auto ip = getsockname(connfd, (struct sockaddr*)&addr, &addrlen);
+        getsockname(connfd, (struct sockaddr*)&addr, &addrlen);
         auto port = ntohs(addr.sin_port);
         info("accept new connection, ip: {} port: {}", inet_ntoa(addr.sin_addr), port);
+
+        net::Socket socket(connfd);
+        // handle_request(socket);
+        // task.resume();
     }
 }
 

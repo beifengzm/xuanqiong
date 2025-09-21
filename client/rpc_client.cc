@@ -1,3 +1,7 @@
+#include <netinet/tcp.h>
+
+#include "util/common.h"
+#include "util/iobuf.h"
 #include "client/rpc_client.h"
 #include "net/socket_utils.h"
 
@@ -7,7 +11,7 @@ RpcClient::RpcClient(const std::string& ip, int port) : ip_(ip), port_(port), so
     
 }
 
-int RpcClient::connect() {
+void RpcClient::connect() {
     sockfd_ = net::SocketUtils::socket();
 
     struct sockaddr_in addr;
@@ -17,7 +21,19 @@ int RpcClient::connect() {
     net::SocketUtils::inet_pton(AF_INET, ip_.c_str(), &addr.sin_addr);
     net::SocketUtils::connect(sockfd_, (struct sockaddr*)&addr, sizeof(addr));
 
-    return 0;
+    int sendbuf = 512 * 1024;
+    net::SocketUtils::setsocketopt(sockfd_, SOL_SOCKET, SO_SNDBUF, &sendbuf, sizeof(sendbuf));
+
+    int recvbuf = 512 * 1024;
+    net::SocketUtils::setsocketopt(sockfd_, SOL_SOCKET, SO_RCVBUF, &recvbuf, sizeof(recvbuf));
+
+    // close nagle
+    int nodelay = 1;
+    net::SocketUtils::setsocketopt(sockfd_, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+}
+
+int RpcClient::send(const util::IOBuf& iobuf) {
+    return net::SocketUtils::send(sockfd_, iobuf.data(), iobuf.size());
 }
 
 } // namespace xuanqiong

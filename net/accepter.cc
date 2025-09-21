@@ -1,16 +1,16 @@
 #include <string>
 #include <stdexcept>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <cstring>
 
-#include "base/common.h"
+#include "util/common.h"
 #include "net/accepter.h"
 #include "net/socket_utils.h"
-
 
 namespace xuanqiong::net {
 
@@ -42,11 +42,39 @@ Accepter::~Accepter() {
     }
 }
 
+void Accepter::set_fd_param(int client_fd) {
+    // set socket to non-blocking
+    if (::fcntl(client_fd, F_SETFL, O_NONBLOCK | O_CLOEXEC) == -1) {
+        error("fcntl failed: {}", strerror(errno));
+        ::close(client_fd);
+    }
+
+    // send buffer size
+    int sendbuf = 512 * 1024;
+    SocketUtils::setsocketopt(client_fd, SOL_SOCKET, SO_SNDBUF, &sendbuf, sizeof(sendbuf));
+
+    // recv buffer size
+    int recvbuf = 512 * 1024;
+    SocketUtils::setsocketopt(client_fd, SOL_SOCKET, SO_RCVBUF, &recvbuf, sizeof(recvbuf));
+
+    // set keepalive
+    int keepalive = 1;
+    SocketUtils::setsocketopt(client_fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+
+    // close nagle
+    int nodelay = 1;
+    SocketUtils::setsocketopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+}
+
 int Accepter::accept() {
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
     int client_fd =
         SocketUtils::accept(sockfd_, (struct sockaddr*)&client_addr, &client_len);
+
+    if (client_fd != -1) {
+        set_fd_param(client_fd);
+    }
 
     return client_fd;
 }

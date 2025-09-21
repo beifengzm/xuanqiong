@@ -5,7 +5,7 @@
 #include <fcntl.h>
 
 #include "net/socket_utils.h"
-#include "base/common.h"
+#include "util/common.h"
 
 namespace xuanqiong::net {
 
@@ -39,10 +39,6 @@ int SocketUtils::accept(int sockfd, struct sockaddr* addr, socklen_t* addrlen) {
     if ((client_fd = ::accept(sockfd, addr, addrlen)) < 0) {
         error("accept4 failed: {}", strerror(errno));
     }
-    if (::fcntl(client_fd, F_SETFD, FD_CLOEXEC) == -1) {
-        ::close(client_fd);
-        return -1;
-    }
     return client_fd;
 }
 
@@ -59,6 +55,14 @@ int SocketUtils::connect(int sockfd, const struct sockaddr *addr, socklen_t addr
         error("connect failed: {}", strerror(errno));
         close(sockfd);
         exit(EXIT_FAILURE);
+    }
+    return ret;
+}
+
+int SocketUtils::send(int sockfd, const void* buf, size_t len) {
+    int ret = ::send(sockfd, buf, len, 0);
+    if (ret == -1) {
+        error("send failed: {}", strerror(errno));
     }
     return ret;
 }

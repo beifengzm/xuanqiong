@@ -14,9 +14,12 @@ class Scheduler;
 namespace xuanqiong::net {
 
 struct ReadAwaiter {
+    Scheduler* scheduler_;
+    ReadAwaiter(Scheduler* scheduler) : scheduler_(scheduler) {}
+
     bool await_ready() { return false; }
-    void await_suspend([[maybe_unused]] std::coroutine_handle<> handle) {
-        info("read await suspend");
+    void await_suspend(std::coroutine_handle<> handle) {
+        scheduler_->schedule(handle);
     }
     void await_resume() {}
 };
@@ -31,11 +34,13 @@ public:
         sockfd_ = other.sockfd_;
         other.sockfd_ = -1;
         buf_ = std::move(other.buf_);
+        scheduler_ = other.scheduler_;
     }
     Socket& operator=(Socket&& other) {
         sockfd_ = other.sockfd_;
         other.sockfd_ = -1;
         buf_ = std::move(other.buf_);
+        scheduler_ = other.scheduler_;
         return *this;
     }
 
@@ -59,11 +64,11 @@ public:
                 info("read data, errno: {}", errno);
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     
-                    return {};
+                    return {scheduler_};
                 }
             }
         }
-        return {};
+        return {scheduler_};
     }
 
 private:

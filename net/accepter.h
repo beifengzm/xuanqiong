@@ -17,6 +17,8 @@ private:
     int port_;           // listen port
     int backlog_;
 
+    void set_fd_param(int client_fd);
+
     Accepter(const Accepter&) = delete;
     Accepter& operator=(const Accepter&) = delete;
 };

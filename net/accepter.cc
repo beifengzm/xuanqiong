@@ -14,8 +14,8 @@
 
 namespace xuanqiong::net {
 
-Accepter::Accepter(int port, int backlog)
-    : sockfd_(-1), port_(port), backlog_(backlog) {
+Accepter::Accepter(int port, int backlog, int nodelay)
+    : sockfd_(-1), port_(port), backlog_(backlog), nodelay_(nodelay) {
 
     // create socket
     sockfd_ = SocketUtils::socket();
@@ -61,9 +61,8 @@ void Accepter::set_fd_param(int client_fd) {
     int keepalive = 1;
     SocketUtils::setsocketopt(client_fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
 
-    // close nagle
-    int nodelay = 1;
-    SocketUtils::setsocketopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+    // set nodelay
+    SocketUtils::setsocketopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay_, sizeof(nodelay_));
 }
 
 int Accepter::accept() {

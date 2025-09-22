@@ -30,6 +30,12 @@ void RpcClient::connect() {
     // close nagle
     int nodelay = 1;
     net::SocketUtils::setsocketopt(sockfd_, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+
+    // set close linger: default
+    struct linger linger;
+    linger.l_onoff = 0;
+    linger.l_linger = 0;
+    net::SocketUtils::setsocketopt(sockfd_, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger));
 }
 
 int RpcClient::send(const util::IOBuf& iobuf) {

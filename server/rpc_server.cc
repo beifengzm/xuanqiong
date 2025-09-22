@@ -10,7 +10,7 @@
 namespace xuanqiong {
 
 RpcServer::RpcServer(const RpcServerOptions& options)
-    : accepter_(options.port, options.backlog) {
+    : accepter_(options.port, options.backlog, options.nodelay) {
 }
 
 void RpcServer::start() {

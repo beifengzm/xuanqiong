@@ -71,7 +71,6 @@ void SocketUtils::setsocketopt(int sockfd, int level, int optname, const void* o
     if (::setsockopt(sockfd, level, optname, optval, optlen) < 0) {
         error("setsockopt failed: {}", strerror(errno));
         close(sockfd);
-        exit(EXIT_FAILURE);
     }
 }
 

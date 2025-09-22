@@ -38,7 +38,7 @@ Accepter::Accepter(int port, int backlog, int nodelay)
 
 Accepter::~Accepter() {
     if (sockfd_ != -1) {
-        close(sockfd_); 
+        ::close(sockfd_);
     }
 }
 

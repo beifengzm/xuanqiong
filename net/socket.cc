@@ -19,7 +19,7 @@ struct ReadAwaiter {
 
     bool await_ready() { return false; }
     void await_suspend(std::coroutine_handle<> handle) {
-        // scheduler_->schedule(handle);
+        scheduler_->schedule(handle);
     }
     void await_resume() {}
 };

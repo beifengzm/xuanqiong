@@ -7,9 +7,7 @@
 
 namespace xuanqiong {
 
-RpcClient::RpcClient(const std::string& ip, int port) : ip_(ip), port_(port), sockfd_(-1) {
-    
-}
+RpcClient::RpcClient(const std::string& ip, int port) : ip_(ip), port_(port), sockfd_(-1) {}
 
 void RpcClient::connect() {
     sockfd_ = net::SocketUtils::socket();

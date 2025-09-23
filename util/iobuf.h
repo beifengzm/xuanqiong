@@ -26,6 +26,8 @@ public:
     char* data() { return buf_; }
     const char* data() const { return buf_; }
 
+    int read_from(int fd);
+
     void append(const char* data, size_t size);
 
 private:

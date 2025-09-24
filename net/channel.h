@@ -80,8 +80,8 @@ private:
     util::IOBuf write_buf_;   // write buffer
     Executor* executor_;      // coroutine executor
 
-    Socket(const Socket&) = delete;
-    Socket& operator=(const Socket&) = delete;
+    Channel(const Channel&) = delete;
+    Channel& operator=(const Channel&) = delete;
 };
 
 } // namespace xuanqiong::net

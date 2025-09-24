@@ -18,6 +18,7 @@ struct SchedItem {
 
 template<class Executor>
 concept IsExecutor = requires(Executor executor) {
+    Executor();   // default constructible
     executor.schedule(std::declval<SchedItem>());
 };
 

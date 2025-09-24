@@ -31,7 +31,7 @@ public:
     void append(const char* data, size_t size);
 
 private:
-    char buf_[4096];
+    char buf_[65536];
     size_t offset_ = 0;
 
     IOBuf(const IOBuf&) = delete;

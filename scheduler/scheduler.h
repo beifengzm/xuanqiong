@@ -16,27 +16,27 @@ struct SchedItem {
     std::coroutine_handle<> handle;
 };
 
-template<class Executor>
-concept IsExecutor = requires(Executor executor) {
-    Executor();   // default constructible
-    executor.schedule(std::declval<SchedItem>());
+class Executor {
+public:
+    Executor() = default;
+    ~Executor() = default;
+
+    virtual void schedule(SchedItem item) = 0;
 };
 
+using ExecutorPtr = std::unique_ptr<Executor>;
+using ExecutorBuilder = std::function<ExecutorPtr()>;
+
 // coroutine scheduler
-template<IsExecutor Executor>
 class Scheduler {
 public:
-    Scheduler() : executor_(new Executor) {}
-    ~Scheduler() {
-        if (executor_) {
-            delete executor_;
-        }
-    }
+    Scheduler(ExecutorBuilder builder) : executor_(builder()) {}
+    ~Scheduler() = default;
 
-    Executor* alloc_executor() { return executor_; }
+    Executor* alloc_executor() { return executor_.get(); }
 
 protected:
-    Executor* executor_;
+    ExecutorPtr executor_;
 };
 
 } // namespace xuanqiong

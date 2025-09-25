@@ -13,18 +13,6 @@ class Executor;
 
 namespace xuanqiong::net {
 
-struct ReadAwaiter {
-    int fd;
-    bool closed;
-    Executor* executor;
-
-    bool await_ready() { return closed; }
-    void await_suspend(std::coroutine_handle<> handle) {
-        executor->schedule({fd, handle});
-    }
-    bool await_resume() { return closed; }
-};
-
 class Channel {
 public:
     Channel(int fd) : sockfd_(fd) {}
@@ -50,11 +38,13 @@ public:
     }
 
     ReadAwaiter async_read() {
+        int nread = 0;
         while (true) {
-            int nread = read_buf_.read_from(sockfd_);
-            if (nread > 0) {
+            int n = read_buf_.read_from(sockfd_);
+            if (n > 0) {
+                nread += n;
                 continue;
-            } else if (nread == 0) {
+            } else if (n == 0) {
                 info("connection closed by perr");
                 ::close(sockfd_);
                 return {sockfd_, true, executor_};

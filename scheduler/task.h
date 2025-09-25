@@ -8,9 +8,9 @@
 
 namespace xuanqiong {
 
+template<typename Promise>
 struct Task {
-    struct promise_type;
-    using HandleType = std::coroutine_handle<promise_type>;
+    using HandleType = std::coroutine_handle<Promise>;
 
     Task(HandleType handle) : handle_(handle) {}
     ~Task();
@@ -25,16 +25,16 @@ private:
     HandleType handle_;
 };
 
-struct Task::promise_type {
-    Task get_return_object() {
-        return Task(std::coroutine_handle<promise_type>::from_promise(*this));
+struct ReadAwaiter {
+    int fd;
+    int nread;           // total bytes read already
+    Executor* executor;
+
+    bool await_ready() { return closed; }
+    bool await_suspend(std::coroutine_handle<> handle) {
+        executor->schedule({fd, handle, EventType::READ});
     }
-    std::suspend_always initial_suspend() { return {}; }
-    std::suspend_always final_suspend() noexcept { return {}; }
-    void unhandled_exception() {
-        std::terminate();
-    }
-    void return_void() {}
+    bool await_resume() { return closed; }
 };
 
 } // namespace xuanqiong

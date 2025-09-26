@@ -6,6 +6,7 @@
 
 #include "util/common.h"
 #include "util/iobuf.h"
+#include "scheduler/task.h"
 
 namespace xuanqiong {
 class Executor;

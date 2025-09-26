@@ -1,6 +1,8 @@
 #pragma once
 
 #include <coroutine>
+#include <memory>
+#include <functional>
 
 namespace xuanqiong {
 

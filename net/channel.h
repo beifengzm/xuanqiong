@@ -2,11 +2,10 @@
 
 #include <coroutine>
 #include <unistd.h>
-#include <sys/socket.h>
 
 #include "util/common.h"
 #include "util/iobuf.h"
-#include "scheduler/task.h"
+#include "scheduler/awaitable.h"
 
 namespace xuanqiong {
 class Executor;
@@ -16,59 +15,39 @@ namespace xuanqiong::net {
 
 class Channel {
 public:
-    Channel(int fd) : sockfd_(fd) {}
-    ~Channel() = default;
-
-    // move only
-    Channel(Channel&& other) {
-        sockfd_ = other.sockfd_;
-        other.sockfd_ = -1;
-        read_buf_ = std::move(other.read_buf_);
-    }
-    Channel& operator=(Channel&& other) {
-        sockfd_ = other.sockfd_;
-        other.sockfd_ = -1;
-        read_buf_ = std::move(other.read_buf_);
-        return *this;
-    }
+    Channel(int fd, Executor* executor);
+    ~Channel();
 
     int fd() const { return sockfd_; }
+    const std::string& local_addr() const { return local_addr_; }
+    int local_port() const { return local_port_; }
+    const std::string& peer_addr() const { return peer_addr_; }
+    int peer_port() const { return peer_port_; }
 
     void close() {
-        ::close(sockfd_);
+        shutdown(sockfd_, SHUT_RDWR);
     }
 
-    ReadAwaiter async_read() {
-        int nread = 0;
-        while (true) {
-            int n = read_buf_.read_from(sockfd_);
-            if (n > 0) {
-                nread += n;
-                continue;
-            } else if (n == 0) {
-                info("connection closed by perr");
-                ::close(sockfd_);
-                return {sockfd_, true, executor_};
-            } else {
-                // retry
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    return {sockfd_, false, executor_};
-                }
-                if (errno == EINTR) {
-                    continue;
-                }
-                error("read data, errno: {}", errno);
-                // read error, close connection
-                ::close(sockfd_);
-                return {sockfd_, false, executor_};
-            }
-        }
+    size_t read_bytes() const {
+        return read_buf_.bytes();
     }
+
+    size_t write_bytes() const {
+        return write_buf_.bytes();
+    }
+
+    ReadAwaiter async_read();
 
 private:
     int sockfd_;              // peer socket
+    std::string local_addr_;  // local address
+    int local_port_;          // local port
+    std::string peer_addr_;   // peer address
+    int peer_port_;           // peer port
+
     util::IOBuf read_buf_;    // read buffer
     util::IOBuf write_buf_;   // write buffer
+
     Executor* executor_;      // coroutine executor
 
     Channel(const Channel&) = delete;

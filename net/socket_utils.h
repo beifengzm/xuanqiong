@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <arpa/inet.h>
 
 namespace xuanqiong::net {
@@ -15,6 +16,8 @@ public:
     static int accept(int sockfd, struct sockaddr* addr, socklen_t* addrlenn);
 
     static void inet_pton(int af, const char *src, void *dst);
+
+    static std::string inet_ntoa(struct in_addr in);
 
     static int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 

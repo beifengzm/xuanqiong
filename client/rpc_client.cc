@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <netinet/tcp.h>
 
 #include "util/common.h"
@@ -36,8 +37,20 @@ void RpcClient::connect() {
     net::SocketUtils::setsocketopt(sockfd_, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger));
 }
 
-int RpcClient::send(const util::IOBuf& iobuf) {
-    return net::SocketUtils::send(sockfd_, iobuf.data(), iobuf.size());
+void RpcClient::close() {
+    if (sockfd_ >= 0) {
+        ::close(sockfd_);
+        sockfd_ = -1;
+    }
+}
+
+int RpcClient::append(const char* data, size_t size) {
+    iobuf_.append(data, size);
+    return size;
+}
+
+int RpcClient::send() {
+    return iobuf_.write_to(sockfd_);
 }
 
 } // namespace xuanqiong

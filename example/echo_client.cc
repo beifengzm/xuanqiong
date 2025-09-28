@@ -12,10 +12,9 @@ int main() {
     client.connect();
 
     while (true) {
-        util::IOBuf iobuf;
         std::string_view data = "hello world";
-        iobuf.append(data.data(), data.size());
-        int ret = client.send(iobuf);
+        client.append(data.data(), data.size());
+        int ret = client.send();
         info("send data: {}, ret: {}", data.data(), ret);
 
         std::this_thread::sleep_for(std::chrono::seconds(1));

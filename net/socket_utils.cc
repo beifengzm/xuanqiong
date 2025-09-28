@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "net/socket_utils.h"
 #include "util/common.h"
@@ -47,6 +49,11 @@ void SocketUtils::inet_pton(int af, const char *src, void *dst) {
         error("inet_pton failed: {}", strerror(errno));
         exit(EXIT_FAILURE);
     }
+}
+
+std::string SocketUtils::inet_ntoa(struct in_addr in) {
+    const char* ip = ::inet_ntoa(in);
+    return ip;
 }
 
 int SocketUtils::connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {

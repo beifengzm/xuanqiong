@@ -8,11 +8,13 @@ namespace xuanqiong {
 
 enum struct EventType : uint8_t {
     READ,
-    WRITE,
-    OTHER,
+    DELETE,     // remove fd from scheduler
+    ADD_WRITE,
+    DEL_WRITE,
+    UNKNOWN,
 };
 
-struct SchedItem {
+struct EventItem {
     int fd;
     EventType type;
     std::coroutine_handle<> handle;
@@ -23,22 +25,29 @@ public:
     Executor() = default;
     ~Executor() = default;
 
-    virtual void schedule(SchedItem item) = 0;
+    virtual bool register_event(const EventItem& item) = 0;
+
+    template<typename Func, typename... Args>
+    void spawn(Func&& func, Args&&... args) {
+        std::invoke(std::forward<Func>(func), std::forward<Args>(args)...);
+    }
 };
 
-using ExecutorPtr = std::unique_ptr<Executor>;
-using ExecutorBuilder = std::function<ExecutorPtr()>;
+enum class SchedPolicy : uint8_t {
+    EPOLL_POLICY,
+    URING_POLICY,
+};
 
 // coroutine scheduler
 class Scheduler {
 public:
-    Scheduler(ExecutorBuilder builder) : executor_(builder()) {}
+    Scheduler(SchedPolicy policy);
     ~Scheduler() = default;
 
     Executor* alloc_executor() { return executor_.get(); }
 
 protected:
-    ExecutorPtr executor_;
+    std::unique_ptr<Executor> executor_;
 };
 
 } // namespace xuanqiong

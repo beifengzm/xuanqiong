@@ -15,12 +15,17 @@ public:
 
     void connect();
 
-    int send(const util::IOBuf& iobuf);
+    void close();
+
+    int append(const char* data, size_t size);
+
+    int send();
 
 private:
     std::string ip_;
     int port_;
     int sockfd_;
+    util::IOBuf iobuf_;
 
     RpcClient(const RpcClient&) = delete;
     RpcClient& operator=(const RpcClient&) = delete;

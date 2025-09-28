@@ -5,12 +5,14 @@
 #include "util/common.h"
 #include "server/rpc_server.h"
 #include "net/socket_utils.h"
-#include "server/server_task.h"
+#include "net/channel.h"
+#include "scheduler/scheduler.h"
 
 namespace xuanqiong {
 
 RpcServer::RpcServer(const RpcServerOptions& options)
     : accepter_(options.port, options.backlog, options.nodelay) {
+    scheduler_ = std::make_unique<Scheduler>(options.sched_policy);
 }
 
 void RpcServer::start() {
@@ -24,15 +26,22 @@ void RpcServer::start() {
             continue;
         }
 
-        struct sockaddr_in addr;
-        socklen_t addrlen = sizeof(addr);
-        getsockname(connfd, (struct sockaddr*)&addr, &addrlen);
-        auto port = ntohs(addr.sin_port);
-        info("accept new connection, ip: {} port: {}", inet_ntoa(addr.sin_addr), port);
+        // launch a coroutine
+        auto executor = scheduler_->alloc_executor();
+        executor->spawn(coro_fn, connfd, executor);
+    }
+}
 
-        net::Socket socket(connfd);
-        // handle_request(socket);
-        // task.resume();
+// coroutine function
+Task<ServerPromise> RpcServer::coro_fn(int client_fd, Executor* executor) {
+    auto channel = std::make_unique<net::Channel>(client_fd, executor);
+    while (true) {
+        bool closed = co_await channel->async_read();
+        if (closed) {
+            info("connection closed by peer: {}:{}", channel->peer_addr(), channel->peer_port());
+            break;
+        }
+        info("read {} bytes", channel->read_bytes());
     }
 }
 

@@ -47,8 +47,10 @@ public:
 
     Executor* alloc_executor() { return executor_.get(); }
 
-protected:
+private:
     std::unique_ptr<Executor> executor_;
+
+    DISALLOW_COPY_AND_ASSIGN(Scheduler);
 };
 
 } // namespace xuanqiong

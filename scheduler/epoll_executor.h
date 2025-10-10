@@ -20,6 +20,8 @@ private:
     // within a single thread, queue does not require lock
     std::unique_ptr<std::thread> thread_;
     int epoll_fd_;
+
+    DISALLOW_COPY_AND_ASSIGN(EpollExecutor);
 };
 
 } // namespace xuanqiong

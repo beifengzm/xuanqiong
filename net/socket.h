@@ -50,8 +50,7 @@ private:
 
     Executor* executor_;      // coroutine executor
 
-    Socket(const Socket&) = delete;
-    Socket& operator=(const Socket&) = delete;
+    DISALLOW_COPY_AND_ASSIGN(Socket);
 };
 
 } // namespace xuanqiong::net

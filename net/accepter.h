@@ -20,8 +20,7 @@ private:
 
     void set_fd_param(int client_fd);
 
-    Accepter(const Accepter&) = delete;
-    Accepter& operator=(const Accepter&) = delete;
+    DISALLOW_COPY_AND_ASSIGN(Accepter);
 };
 
 } // namespace xuanqiong::net

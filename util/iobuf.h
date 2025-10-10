@@ -2,6 +2,8 @@
 #include <cstddef>
 #include <cstring>
 
+#include "util/common.h"
+
 namespace xuanqiong::util {
 
 class IOBuf {
@@ -45,8 +47,7 @@ private:
     size_t begin = 0;
     size_t end = 0;         // empty in end
 
-    IOBuf(const IOBuf&) = delete;
-    IOBuf& operator=(const IOBuf&) = delete;
+    DISALLOW_COPY_AND_ASSIGN(IOBuf);
 };
 
 } // namespace xuanqiong::util

@@ -13,6 +13,8 @@ struct Task {
 
 private:
     HandleType handle_;
+
+    DISALLOW_COPY_AND_ASSIGN(Task);
 };
 
 } // namespace xuanqiong

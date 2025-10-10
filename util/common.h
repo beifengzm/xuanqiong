@@ -16,3 +16,7 @@
 #define warn(fmt, ...) std::cerr << std::format(fmt, ##__VA_ARGS__) << std::endl;
 #define debug(fmt, ...) std::cerr << std::format(fmt, ##__VA_ARGS__) << std::endl;
 #define trace(fmt, ...) std::cerr << std::format(fmt, ##__VA_ARGS__) << std::endl;
+
+#define DISALLOW_COPY_AND_ASSIGN(TypeName) \
+  TypeName(const TypeName&) = delete;      \
+  void operator=(const TypeName&) = delete

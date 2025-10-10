@@ -10,7 +10,7 @@
 namespace xuanqiong {
 
 EpollExecutor::EpollExecutor() {
-    epoll_fd_ = epoll_create1(0);
+    epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
     if (epoll_fd_ == -1) {
         error("epoll_create1 failed: %s", strerror(errno));
     }

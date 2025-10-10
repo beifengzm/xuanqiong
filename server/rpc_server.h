@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <exception>
 
 #include "net/accepter.h"
 #include "scheduler/task.h"

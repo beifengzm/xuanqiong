@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "util/common.h"
+
 namespace xuanqiong::net {
 
 class Accepter {

@@ -4,6 +4,8 @@
 #include <memory>
 #include <functional>
 
+#include "util/common.h"
+
 namespace xuanqiong {
 
 enum struct EventType : uint8_t {

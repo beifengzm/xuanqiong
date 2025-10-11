@@ -16,10 +16,13 @@ public:
 
     bool register_event(const EventItem& event_item) override;
 
+    void stop();
+
 private:
     // within a single thread, queue does not require lock
     std::unique_ptr<std::thread> thread_;
     int epoll_fd_;
+    bool stop_;
 
     DISALLOW_COPY_AND_ASSIGN(EpollExecutor);
 };

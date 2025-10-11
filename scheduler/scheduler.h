@@ -37,7 +37,7 @@ public:
 };
 
 enum class SchedPolicy : uint8_t {
-    EPOLL_POLICY,
+    POLL_POLICY,
     URING_POLICY,
 };
 

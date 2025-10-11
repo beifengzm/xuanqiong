@@ -10,7 +10,7 @@ namespace xuanqiong {
 
 Scheduler::Scheduler(SchedPolicy policy) {
     switch (policy) {
-        case SchedPolicy::EPOLL_POLICY:
+        case SchedPolicy::POLL_POLICY:
 #ifdef __APPLE__
             executor_ = std::make_unique<KqueueExecutor>();
 #else

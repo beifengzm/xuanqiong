@@ -40,7 +40,7 @@ struct RpcServerOptions {
     RpcServerOptions(int port,
                      int backlog = 256,
                      bool nodelay = 1,
-                     SchedPolicy policy = SchedPolicy::EPOLL_POLICY)
+                     SchedPolicy policy = SchedPolicy::POLL_POLICY)
         : port(port), backlog(backlog), nodelay(nodelay), sched_policy(policy) {}
 };
 

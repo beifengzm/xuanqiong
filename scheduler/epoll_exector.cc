@@ -17,7 +17,7 @@ EpollExecutor::EpollExecutor() {
         error("epoll_create1 failed: %s", strerror(errno));
     }
     thread_ = std::make_unique<std::thread>([this]() {
-        while (true) {
+        while (!stop_) {
             struct epoll_event events[MAX_EVENTS];
             int nready = epoll_wait(epoll_fd_, events, MAX_EVENTS, -1);
             if (nready == -1) {
@@ -42,6 +42,10 @@ EpollExecutor::~EpollExecutor() {
         ::close(epoll_fd_);
         epoll_fd_ = -1;
     }
+}
+
+void EpollExecutor::stop() {
+    stop_ = true;
 }
 
 bool EpollExecutor::register_event(const EventItem& event_item) {

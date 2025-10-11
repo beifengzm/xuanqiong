@@ -3,7 +3,9 @@ project(xuanqiong)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3 -Wall -Wextra -Wno-missing-requires -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3 -Wall -Wextra \
+    -Wno-unused-parameter \
+    -Wno-deprecated-declarations")
 
 # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/third_party/protobuf")
 find_package(Protobuf REQUIRED)

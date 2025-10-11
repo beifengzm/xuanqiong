@@ -1,3 +1,5 @@
+#ifdef __linux__
+
 #include <sys/epoll.h>
 #include <string.h>
 
@@ -84,3 +86,5 @@ bool EpollExecutor::register_event(const EventItem& event_item) {
 }
 
 } // namespace xuanqiong
+
+#endif

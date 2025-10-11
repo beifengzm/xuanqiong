@@ -26,7 +26,7 @@ struct EventItem {
 class Executor {
 public:
     Executor() = default;
-    ~Executor() = default;
+    virtual ~Executor() = default;
 
     virtual bool register_event(const EventItem& item) = 0;
 

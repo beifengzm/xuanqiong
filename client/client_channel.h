@@ -7,16 +7,20 @@
 
 namespace xuanqiong {
 
+namespace net {
+class Socket;
+}
+
 class ClientChannel {
 public:
-    ClientChannel(Socket* socket);
-    ~ClientChannel();
+    ClientChannel(net::Socket* socket) : socket_(socket) {}
+    ~ClientChannel() = default;
 
     template<typename Request, typename Response>
     void call_method(const Request* req, Response* resp);
 
 private:
-    Socket* socket_;
+    net::Socket* socket_;
 
     DISALLOW_COPY_AND_ASSIGN(ClientChannel);
 };

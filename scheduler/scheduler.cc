@@ -5,7 +5,6 @@
 #include "scheduler/epoll_executor.h"
 #endif
 
-
 namespace xuanqiong {
 
 Scheduler::Scheduler(SchedPolicy policy) {

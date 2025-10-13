@@ -2,10 +2,12 @@
 
 #include <string>
 
+#include "util/output_stream.h"
+
 namespace xuanqiong {
 
-namespace base {
-class IOBuf;
+namespace util {
+class OutputBuffer;
 }
 
 class RpcClient {
@@ -25,7 +27,7 @@ private:
     std::string ip_;
     int port_;
     int sockfd_;
-    util::IOBuf iobuf_;
+    util::OutputBuffer output_buf_;
 
     RpcClient(const RpcClient&) = delete;
     RpcClient& operator=(const RpcClient&) = delete;

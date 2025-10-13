@@ -4,7 +4,8 @@
 #include <unistd.h>
 
 #include "util/common.h"
-#include "util/iobuf.h"
+#include "util/input_stream.h"
+#include "util/output_stream.h"
 #include "scheduler/awaitable.h"
 
 namespace xuanqiong {
@@ -36,6 +37,14 @@ public:
         return write_buf_.bytes();
     }
 
+    util::NetInputStream get_input_stream() {
+        return util::NetInputStream(&read_buf_);
+    }
+
+    util::NetOutputStream get_output_stream() {
+        return util::NetOutputStream(&write_buf_);
+    }
+
     ReadAwaiter async_read();
 
 private:
@@ -45,8 +54,8 @@ private:
     std::string peer_addr_;   // peer address
     int peer_port_;           // peer port
 
-    util::IOBuf read_buf_;    // read buffer
-    util::IOBuf write_buf_;   // write buffer
+    util::InputBuffer read_buf_;    // read buffer
+    util::OutputBuffer write_buf_;   // write buffer
 
     Executor* executor_;      // coroutine executor
 

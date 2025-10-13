@@ -2,7 +2,6 @@
 #include <netinet/tcp.h>
 
 #include "util/common.h"
-#include "util/iobuf.h"
 #include "client/rpc_client.h"
 #include "net/socket_utils.h"
 
@@ -45,12 +44,12 @@ void RpcClient::close() {
 }
 
 int RpcClient::append(const char* data, size_t size) {
-    iobuf_.append(data, size);
+    output_buf_.append(data, size);
     return size;
 }
 
 int RpcClient::send() {
-    return iobuf_.write_to(sockfd_);
+    return output_buf_.write_to(sockfd_);
 }
 
 } // namespace xuanqiong

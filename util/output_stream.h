@@ -13,7 +13,7 @@ public:
     OutputBuffer();
     ~OutputBuffer();
 
-    // write data to fd
+    // write data to fd, use writev
     int write_to(int fd);
 
     // data size in bytes to write

@@ -44,7 +44,6 @@ void OutputBuffer::back_up(int count) {
         count, to_backup, total_bytes_, to_write_bytes_, last_block_->end);
 }
 
-// TODO: use gather/scatter io
 int OutputBuffer::write_to(int fd) {
     std::vector<iovec> iovs;
     for (auto block = cur_block_; block && iovs.size() < IOV_MAX; block = block->next) {

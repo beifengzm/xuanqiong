@@ -14,7 +14,7 @@ int main() {
     client.connect();
 
     while (true) {
-        std::string data(146, 'a');
+        std::string data(16, 'a');
         auto output_stream = client.get_output_stream();
         for (int i = 0; i < 100; ++i) {
             EchoRequest request;

@@ -15,9 +15,8 @@ public:
 
     int read_from(int fd);
 
-    // TODO: error
-    // valid read data size in bytes
-    size_t byte_count() const { return read_bytes_; }
+    // readable total data size in bytes
+    size_t bytes() const { return read_bytes_; }
 
 private:
     bool next(const void** data, int* size);
@@ -26,7 +25,10 @@ private:
 
     bool skip(int n);
 
-    size_t read_bytes_;
+    int64_t byte_count() const { return consumed_bytes_; }
+
+    size_t read_bytes_;       // size read from fd
+    size_t consumed_bytes_;   // size consumed by ZeroCopyInputStream
 
     // range [first_block, cur_block) for backup
     BufferBlock* first_block_;

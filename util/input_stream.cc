@@ -32,6 +32,7 @@ bool InputBuffer::next(const void** data, int* size) {
     *data = cur_block_->data + cur_block_->begin;
     *size = cur_block_->end - cur_block_->begin;
     cur_block_->begin += *size;
+    consumed_bytes_ += *size;
     if (cur_block_->begin == kBlockSize && cur_block_->next) {
         cur_block_ = cur_block_->next;
     }
@@ -43,6 +44,7 @@ void InputBuffer::back_up(int n) {
     int backup_bytes = std::min(n, cur_block_->begin);
     cur_block_->begin -= backup_bytes;
     read_bytes_ += backup_bytes;
+    consumed_bytes_ -= backup_bytes;
 
     // dealloc consumed blocks
     while (first_block_ != cur_block_) {
@@ -60,6 +62,7 @@ bool InputBuffer::skip(int n) {
         int to_skip = std::min(n, cur_block_->end - cur_block_->begin);
         cur_block_->begin += to_skip;
         n -= to_skip;
+        consumed_bytes_ += to_skip;
         read_bytes_ -= to_skip;
 
         if (cur_block_->begin == kBlockSize && cur_block_->next) {

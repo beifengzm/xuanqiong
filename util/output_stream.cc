@@ -13,6 +13,7 @@ bool OutputBuffer::next(void** data, int* size) {
     *data = last_block_->data + last_block_->end;
     *size = kBlockSize - last_block_->end;
     to_write_bytes_ += *size;
+    total_bytes_ += *size;
     last_block_->end += *size;
     if (last_block_->end == kBlockSize) {
         last_block_->next = new BufferBlock;
@@ -24,6 +25,7 @@ bool OutputBuffer::next(void** data, int* size) {
 void OutputBuffer::back_up(int count) {
     int to_backup = std::min(count, last_block_->end);
     to_write_bytes_ -= to_backup;
+    total_bytes_ -= to_backup;
     last_block_->end -= to_backup;
 }
 

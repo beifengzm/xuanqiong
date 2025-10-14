@@ -18,19 +18,21 @@ public:
 
     void append(const void* data, int size);
 
-    // TODO: error
     // data size in bytes to write
-    int64_t byte_count() const { return to_write_bytes_; }
+    size_t bytes() const { return to_write_bytes_; }
 
 private:
     bool next(void** data, int* size);
 
     void back_up(int count);
 
+    int64_t byte_count() const { return to_write_bytes_; }
+
     BufferBlock* cur_block_;
     BufferBlock* last_block_;
 
-    int64_t to_write_bytes_;
+    size_t to_write_bytes_;    // size to write to fd
+    size_t total_bytes_;       // total size from ZeroCopyOutputStream
 
     DISALLOW_COPY_AND_ASSIGN(OutputBuffer);
 };

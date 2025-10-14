@@ -19,9 +19,11 @@ public:
 
     void close();
 
-    int append(const char* data, size_t size);
-
     int send();
+
+    util::NetOutputStream get_output_stream() {
+        return util::NetOutputStream(&output_buf_);
+    }
 
 private:
     std::string ip_;

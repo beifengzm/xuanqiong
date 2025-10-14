@@ -11,7 +11,7 @@ class InputBuffer {
 
 public:
     InputBuffer();
-    ~InputBuffer() = default;
+    ~InputBuffer();
 
     int read_from(int fd);
 

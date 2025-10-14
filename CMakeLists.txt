@@ -83,7 +83,7 @@ gen_proto(example PROTO_SRCS PROTO_HDRS)
 add_library(echo_proto STATIC ${PROTO_SRCS} ${PROTO_HDRS})
 
 add_executable(echo_server "example/echo_server.cc")
-target_link_libraries(echo_server rpc_server echo_proto net util sched pthread)
+target_link_libraries(echo_server rpc_server echo_proto net util sched pthread protobuf::libprotobuf)
 
 add_executable(echo_client "example/echo_client.cc")
-target_link_libraries(echo_client rpc_client echo_proto net util sched pthread)
+target_link_libraries(echo_client rpc_client echo_proto net util sched pthread protobuf::libprotobuf)

@@ -43,11 +43,6 @@ void RpcClient::close() {
     }
 }
 
-int RpcClient::append(const char* data, size_t size) {
-    output_buf_.append(data, size);
-    return size;
-}
-
 int RpcClient::send() {
     return output_buf_.write_to(sockfd_);
 }

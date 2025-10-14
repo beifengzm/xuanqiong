@@ -11,12 +11,10 @@ class OutputBuffer {
 
 public:
     OutputBuffer();
-    ~OutputBuffer() = default;
+    ~OutputBuffer();
 
     // write data to fd
     int write_to(int fd);
-
-    void append(const void* data, int size);
 
     // data size in bytes to write
     size_t bytes() const { return to_write_bytes_; }

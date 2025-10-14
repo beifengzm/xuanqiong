@@ -4,10 +4,18 @@
 
 namespace xuanqiong::util {
 
-InputBuffer::InputBuffer() : read_bytes_(0) {
+InputBuffer::InputBuffer() : read_bytes_(0), consumed_bytes_(0) {
     first_block_ = new BufferBlock;
     cur_block_ = first_block_;
     last_block_ = first_block_;
+}
+
+InputBuffer::~InputBuffer() {
+    while (first_block_) {
+        auto block = first_block_;
+        first_block_ = first_block_->next;
+        delete block;
+    }
 }
 
 int InputBuffer::read_from(int fd) {

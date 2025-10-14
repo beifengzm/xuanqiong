@@ -5,13 +5,14 @@
 #include "util/common.h"
 #include "util/input_stream.h"
 #include "util/output_stream.h"
-#include "client/rpc_client.h"
+#include "scheduler/scheduler.h"
+#include "client/client_channel.h"
 
 using namespace xuanqiong;
 
 int main() {
-    RpcClient client("127.0.0.1", 8888);
-    client.connect();
+    Scheduler scheduler(SchedPolicy::POLL_POLICY)
+    ClientChannel client("127.0.0.1", 8888, scheduler.allocate_executor());
 
     while (true) {
         std::string data(16, 'a');

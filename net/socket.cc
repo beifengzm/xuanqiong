@@ -22,7 +22,7 @@ Socket::Socket(int fd, Executor* executor)
     peer_addr_ = SocketUtils::inet_ntoa(peer_addr.sin_addr);
     peer_port_ = ntohs(peer_addr.sin_port);
 
-    info("new connection, local: {}:{} <-> peer: {}:{}",
+    info("connection: local: {}:{} <-> peer: {}:{}",
         local_addr_, local_port_, peer_addr_, peer_port_);
 }
 
@@ -49,6 +49,29 @@ ReadAwaiter Socket::async_read() {
             return {sockfd_, true, executor_};
         }
     }
+}
+
+WriteAwaiter Socket::async_write() {
+    int write_remain = write_buf_.bytes();
+    while (write_remain > 0) {
+        int n = write_buf_.write_to(sockfd_);
+        if (n >= 0) {
+            write_remain -= n;
+            continue;
+        } else {
+            // retry
+            if (errno == EINTR) {
+                continue;
+            }
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return {sockfd_, write_remain, executor_};
+            }
+            // other error
+            error("write data, errno: {}", errno);
+            return {sockfd_, -1, executor_};
+        }
+    }
+    return {sockfd_, write_remain, executor_};
 }
 
 } // namespace xuanqiong::net

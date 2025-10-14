@@ -44,6 +44,22 @@ void OutputBuffer::back_up(int count) {
         count, to_backup, total_bytes_, to_write_bytes_, last_block_->end);
 }
 
+void OutputBuffer::append(const void* data, int size) {
+    const char* ptr = (const char*)data;
+    while (size > 0) {
+        int to_write = std::min(size, kBlockSize - last_block_->end);
+        memcpy(last_block_->data + last_block_->end, ptr, to_write);
+        last_block_->end += to_write;
+        ptr += to_write;
+        size -= to_write;
+        to_write_bytes_ += to_write;
+        if (last_block_->end == kBlockSize) {
+            last_block_->next = new BufferBlock;
+            last_block_ = last_block_->next;
+        }
+    }
+}
+
 int OutputBuffer::write_to(int fd) {
     std::vector<iovec> iovs;
     for (auto block = cur_block_; block && iovs.size() < IOV_MAX; block = block->next) {
@@ -52,6 +68,7 @@ int OutputBuffer::write_to(int fd) {
         iovs.emplace_back(data, size);
     }
 
+    // use writev to reduce syscall
     int nwrite = writev(fd, iovs.data(), iovs.size());
     if (nwrite <= 0) {
         return nwrite;

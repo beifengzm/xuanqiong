@@ -11,6 +11,8 @@ public:
     OutputBuffer();
     ~OutputBuffer();
 
+    void append(const void* data, int size);
+
     // write data to fd, use writev
     int write_to(int fd);
 

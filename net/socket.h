@@ -2,6 +2,7 @@
 
 #include <coroutine>
 #include <unistd.h>
+#include <sys/socket.h>
 
 #include "util/common.h"
 #include "util/input_stream.h"
@@ -46,6 +47,7 @@ public:
     }
 
     ReadAwaiter async_read();
+    WriteAwaiter async_write();
 
 private:
     int sockfd_;              // peer socket

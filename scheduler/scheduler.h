@@ -11,8 +11,7 @@ namespace xuanqiong {
 enum struct EventType : uint8_t {
     READ,
     DELETE,     // remove fd from scheduler
-    ADD_WRITE,
-    DEL_WRITE,
+    WRITE,
     UNKNOWN,
 };
 

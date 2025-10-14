@@ -1,26 +1,35 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
-#include "util/common.h"
-#include "google/protobuf/service.h"
+#include "net/socket.h"
+#include "util/output_stream.h"
 
 namespace xuanqiong {
 
-namespace net {
-class Socket;
-}
+class Executor;
 
 class ClientChannel {
 public:
-    ClientChannel(net::Socket* socket) : socket_(socket) {}
-    ~ClientChannel() = default;
+    ClientChannel(const std::string& ip, int port, Executor* executor);
+
+    void close();
+
+    int send();
+
+    util::NetOutputStream get_output_stream() {
+        return util::NetOutputStream(&socket_->get_output_buffer());
+    }
 
     template<typename Request, typename Response>
-    void call_method(const Request* req, Response* resp);
+    void call_method(const Request* request,
+                     Response* response,
+                     const std::string& service_name,
+                     const std::string& method_name);
 
 private:
-    net::Socket* socket_;
+    std::unique_ptr<net::Socket> socket_;
 
     DISALLOW_COPY_AND_ASSIGN(ClientChannel);
 };

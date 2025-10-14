@@ -7,23 +7,25 @@
 namespace xuanqiong::util {
 
 class InputBuffer {
+    friend class NetInputStream;
+
 public:
     InputBuffer();
     ~InputBuffer() = default;
 
-    bool next(const void** data, size_t* size);
-
-    void back_up(size_t n);
-
-    bool skip(size_t n);
+    int read_from(int fd);
 
     // TODO: error
     // valid read data size in bytes
     size_t byte_count() const { return read_bytes_; }
 
-    int read_from(int fd);
-
 private:
+    bool next(const void** data, int* size);
+
+    void back_up(int n);
+
+    bool skip(int n);
+
     size_t read_bytes_;
 
     // range [first_block, cur_block) for backup

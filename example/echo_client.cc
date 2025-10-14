@@ -3,7 +3,7 @@
 
 #include "example/echo.pb.h"
 #include "util/common.h"
-#include "util/iobuf.h"
+#include "util/input_stream.h"
 #include "client/rpc_client.h"
 
 using namespace xuanqiong;

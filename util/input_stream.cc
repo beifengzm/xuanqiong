@@ -39,8 +39,8 @@ bool InputBuffer::next(const void** data, int* size) {
     return true;
 }
 
-void InputBuffer::back_up(size_t n) {
-    size_t backup_bytes = std::min(n, cur_block_->begin);
+void InputBuffer::back_up(int n) {
+    int backup_bytes = std::min(n, cur_block_->begin);
     cur_block_->begin -= backup_bytes;
     read_bytes_ += backup_bytes;
 
@@ -52,12 +52,12 @@ void InputBuffer::back_up(size_t n) {
     }
 }
 
-bool InputBuffer::skip(size_t n) {
+bool InputBuffer::skip(int n) {
     if (n > byte_count()) {
         return false;
     }
     while (n > 0) {
-        size_t to_skip = std::min(n, size_t(cur_block_->end - cur_block_->begin));
+        int to_skip = std::min(n, cur_block_->end - cur_block_->begin);
         cur_block_->begin += to_skip;
         n -= to_skip;
         read_bytes_ -= to_skip;

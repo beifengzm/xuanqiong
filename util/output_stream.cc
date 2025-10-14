@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include "util/output_stream.h"
 
 namespace xuanqiong::util {
@@ -25,6 +27,7 @@ void OutputBuffer::back_up(int count) {
     last_block_->end -= to_backup;
 }
 
+// TODO: use gather/scatter io
 int OutputBuffer::write_to(int fd) {
     int nwrite = 0;
     BufferBlock* block = cur_block_;
@@ -43,6 +46,22 @@ int OutputBuffer::write_to(int fd) {
         }
     }
     return nwrite;
+}
+
+void OutputBuffer::append(const void* data, int size) {
+    const char* ptr = (const char*)data;
+    while (size > 0) {
+        int to_write = std::min(size, kBlockSize - last_block_->end);
+        memcpy(last_block_->data + last_block_->end, ptr, to_write);
+        last_block_->end += to_write;
+        ptr += to_write;
+        size -= to_write;
+        to_write_bytes_ += to_write;
+        if (last_block_->end == kBlockSize) {
+            last_block_->next = new BufferBlock;
+            last_block_ = last_block_->next;
+        }
+    }
 }
 
 } // namespace xuanqiong::util

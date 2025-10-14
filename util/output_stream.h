@@ -7,26 +7,32 @@
 namespace xuanqiong::util {
 
 class OutputBuffer {
+    friend class NetOutputStream;
+
 public:
     OutputBuffer();
     ~OutputBuffer() = default;
 
-    bool next(void** data, int* size);
+    // write data to fd
+    int write_to(int fd);
 
-    void back_up(int count);
+    void append(const void* data, int size);
 
     // TODO: error
     // data size in bytes to write
     int64_t byte_count() const { return to_write_bytes_; }
 
-    // write data to fd
-    int write_to(int fd);
-
 private:
+    bool next(void** data, int* size);
+
+    void back_up(int count);
+
     BufferBlock* cur_block_;
     BufferBlock* last_block_;
 
     int64_t to_write_bytes_;
+
+    DISALLOW_COPY_AND_ASSIGN(OutputBuffer);
 };
 
 class NetOutputStream : public google::protobuf::io::ZeroCopyOutputStream {

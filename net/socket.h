@@ -30,11 +30,11 @@ public:
     }
 
     size_t read_bytes() const {
-        return read_buf_.byte_count();
+        return read_buf_.bytes();
     }
 
     size_t write_bytes() const {
-        return write_buf_.byte_count();
+        return write_buf_.bytes();
     }
 
     util::NetInputStream get_input_stream() {

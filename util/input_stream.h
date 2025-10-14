@@ -7,8 +7,6 @@
 namespace xuanqiong::util {
 
 class InputBuffer {
-    friend class NetInputStream;
-
 public:
     InputBuffer();
     ~InputBuffer();
@@ -19,6 +17,8 @@ public:
     size_t bytes() const { return read_bytes_; }
 
 private:
+    friend class NetInputStream;
+
     bool next(const void** data, int* size);
 
     void back_up(int n);

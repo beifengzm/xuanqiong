@@ -7,8 +7,6 @@
 namespace xuanqiong::util {
 
 class OutputBuffer {
-    friend class NetOutputStream;
-
 public:
     OutputBuffer();
     ~OutputBuffer();
@@ -20,6 +18,8 @@ public:
     size_t bytes() const { return to_write_bytes_; }
 
 private:
+    friend class NetOutputStream;
+
     bool next(void** data, int* size);
 
     void back_up(int count);

@@ -38,6 +38,7 @@ Task<ServerPromise> RpcServer::coro_fn(int client_fd, Executor* executor) {
     while (true) {
         bool closed = co_await socket->async_read();
         if (closed) {
+            socket->close();
             info("connection closed by peer: {}:{}", socket->peer_addr(), socket->peer_port());
             break;
         }

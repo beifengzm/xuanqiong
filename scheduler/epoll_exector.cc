@@ -26,6 +26,7 @@ EpollExecutor::EpollExecutor() {
             }
             error("epoll_wait nready: {}", nready);
             for (int i = 0; i < nready; i++) {
+                // TODO: handle error event
                 if (events[i].events & EPOLLOUT) {
                     // remove write event
                     auto write_info =
@@ -80,14 +81,14 @@ bool EpollExecutor::register_event(const EventItem& event_item) {
         case EventType::WRITE:
             ev.data.ptr =
                 new std::pair<int, void*>(event_item.fd, event_item.handle.address());
-            ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+            ev.events = EPOLLOUT | EPOLLET;
             if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, event_item.fd, &ev) == -1) {
                 error("epoll_ctl failed: {}", strerror(errno));
                 return false;
             }
             break;
         case EventType::DELETE:
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_item.fd, &ev) == -1) {
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_item.fd, nullptr) == -1) {
                 error("epoll_ctl failed: {}", strerror(errno));
                 return false;
             }

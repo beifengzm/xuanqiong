@@ -31,7 +31,6 @@ KqueueExecutor::KqueueExecutor() {
                 error("kevent wait failed: %s", strerror(errno));
                 continue;
             }
-
             for (int i = 0; i < nready; ++i) {
                 void* udata = events[i].udata;
                 if (udata == nullptr) {
@@ -64,7 +63,6 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
 
     switch (event_item.type) {
         case EventType::READ: {
-            // Add or re-add read event (level-triggered by default, but EV_CLEAR makes it edge-like)
             EV_SET(&change,
                    static_cast<uintptr_t>(event_item.fd),
                    EVFILT_READ,
@@ -73,20 +71,16 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
                    event_item.handle.address());
             break;
         }
-
         case EventType::WRITE: {
-            // Temporarily add write event; will be deleted after trigger
             EV_SET(&change,
                    static_cast<uintptr_t>(event_item.fd),
                    EVFILT_WRITE,
                    EV_ADD | EV_CLEAR,
                    0, 0,
-                   event_item.handle.address());
+                   new std::pair<int, void*>(event_item.fd, event_item.handle.address()));
             break;
         }
-
         case EventType::DELETE: {
-            // Delete both read and write filters for this fd
             EV_SET(&change,
                    static_cast<uintptr_t>(event_item.fd),
                    EVFILT_READ,
@@ -105,7 +99,6 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
 
             return true;
         }
-
         case EventType::UNKNOWN:
             error("EventType::UNKNOWN is invalid");
             return false;

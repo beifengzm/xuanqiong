@@ -11,8 +11,8 @@
 using namespace xuanqiong;
 
 int main() {
-    Scheduler scheduler(SchedPolicy::POLL_POLICY)
-    ClientChannel client("127.0.0.1", 8888, scheduler.allocate_executor());
+    Scheduler scheduler(SchedPolicy::POLL_POLICY);
+    ClientChannel client("127.0.0.1", 8888, scheduler.alloc_executor());
 
     while (true) {
         std::string data(16, 'a');

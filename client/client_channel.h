@@ -19,7 +19,7 @@ public:
     int send();
 
     util::NetOutputStream get_output_stream() {
-        return util::NetOutputStream(&socket_->get_output_buffer());
+        return socket_->get_output_stream();
     }
 
     template<typename Request, typename Response>

@@ -64,6 +64,7 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
 
     switch (event_item.type) {
         case EventType::READ: {
+            // Add or re-add read event (level-triggered by default, but EV_CLEAR makes it edge-like)
             EV_SET(&change,
                    static_cast<uintptr_t>(event_item.fd),
                    EVFILT_READ,
@@ -73,35 +74,26 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
             break;
         }
 
-        case EventType::ADD_WRITE: {
+        case EventType::WRITE: {
+            // Temporarily add write event; will be deleted after trigger
             EV_SET(&change,
                    static_cast<uintptr_t>(event_item.fd),
                    EVFILT_WRITE,
                    EV_ADD | EV_CLEAR,
                    0, 0,
                    event_item.handle.address());
-            break;
-        }
-
-        case EventType::DEL_WRITE: {
-            EV_SET(&change,
-                   static_cast<uintptr_t>(event_item.fd),
-                   EVFILT_WRITE,
-                   EV_DELETE,
-                   0, 0,
-                   nullptr);
             break;
         }
 
         case EventType::DELETE: {
+            // Delete both read and write filters for this fd
             EV_SET(&change,
                    static_cast<uintptr_t>(event_item.fd),
                    EVFILT_READ,
                    EV_DELETE,
                    0, 0,
                    nullptr);
-            if (kevent(kq_fd_, &change, 1, nullptr, 0, nullptr) == -1) {
-            }
+            kevent(kq_fd_, &change, 1, nullptr, 0, nullptr); // ignore errors
 
             EV_SET(&change,
                    static_cast<uintptr_t>(event_item.fd),
@@ -109,8 +101,7 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
                    EV_DELETE,
                    0, 0,
                    nullptr);
-            if (kevent(kq_fd_, &change, 1, nullptr, 0, nullptr) == -1) {
-            }
+            kevent(kq_fd_, &change, 1, nullptr, 0, nullptr); // ignore errors
 
             return true;
         }

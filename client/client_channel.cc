@@ -44,7 +44,8 @@ void ClientChannel::close() {
 }
 
 int ClientChannel::send() {
-    return output_buf_.write_to(socket_->fd());
+    // return output_buf_.write_to(socket_->fd());
+    return 0;
 }
 
 template<typename Request, typename Response>

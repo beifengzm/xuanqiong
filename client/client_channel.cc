@@ -44,7 +44,7 @@ void ClientChannel::close() {
 }
 
 int ClientChannel::send() {
-    // return output_buf_.write_to(socket_->fd());
+    socket_->send(output_buf_);
     return 0;
 }
 
@@ -56,6 +56,5 @@ void ClientChannel::call_method(const Request* request,
     send();
     response->read(socket_->get_input_stream());
 }
-
 
 } // namespace xuanqiong

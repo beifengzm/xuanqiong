@@ -8,7 +8,7 @@
 
 namespace xuanqiong {
 
-ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor) {
+ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor) : executor_(executor) {
     int sockfd = net::SocketUtils::socket();
 
     struct sockaddr_in addr;
@@ -41,11 +41,6 @@ ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor
 
 void ClientChannel::close() {
     socket_->close();
-}
-
-int ClientChannel::send() {
-    socket_->send(output_buf_);
-    return 0;
 }
 
 template<typename Request, typename Response>

@@ -30,6 +30,7 @@ public:
 
 private:
     std::unique_ptr<net::Socket> socket_;
+    Executor* executor_;
 
     DISALLOW_COPY_AND_ASSIGN(ClientChannel);
 };

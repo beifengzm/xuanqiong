@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <netinet/tcp.h>
+#include <google/protobuf/io/coded_stream.h>
 
 #include "util/common.h"
 #include "net/socket_utils.h"
@@ -44,12 +45,19 @@ void ClientChannel::close() {
 }
 
 template<typename Request, typename Response>
-void ClientChannel::call_method(const Request* request,
-                                Response* response,
-                                const std::string& service_name,
-                                const std::string& method_name) {
-    send();
-    response->read(socket_->get_input_stream());
+Task<ClientPromise> ClientChannel::call_method(
+    const Request* request,
+    Response* response,
+    const std::string& service_name,
+    const std::string& method_name
+) {
+    // serialize request
+    util::NetOutputStream output_stream = socket_->get_output_stream();
+    google::protobuf::io::CodedOutputStream adaptor(&output_stream);
+    request->SerializeToZeroCopyStream(&adaptor);
+
+    co_await socket_->async_write();
+    co_await socket_->async_read(response);
 }
 
 } // namespace xuanqiong

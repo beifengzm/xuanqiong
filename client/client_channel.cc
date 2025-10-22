@@ -9,7 +9,7 @@
 
 namespace xuanqiong {
 
-ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor) : executor_(executor) {
+ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor) {
     int sockfd = net::SocketUtils::socket();
 
     struct sockaddr_in addr;
@@ -60,7 +60,8 @@ void ClientChannel::call_method(
     // google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
     request->SerializeToZeroCopyStream(&output_stream);
 
-    executor_->spawn(coro_fn(this, socket_));
+    auto executor = socket_->executor();
+    executor->spawn(coro_fn(this, socket_));
 }
 
 } // namespace xuanqiong

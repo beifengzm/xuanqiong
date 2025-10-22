@@ -51,7 +51,6 @@ public:
 
 private:
     std::shared_ptr<net::Socket> socket_;
-    Executor* executor_;
 
     DISALLOW_COPY_AND_ASSIGN(ClientChannel);
 };

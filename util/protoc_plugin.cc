@@ -1,3 +1,203 @@
+// #include <string>
+// #include <cctype>
+
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wunused-parameter"
+
+// #include <google/protobuf/io/printer.h>
+// #include <google/protobuf/compiler/plugin.h>
+// #include <google/protobuf/descriptor.h>
+// #include <google/protobuf/io/zero_copy_stream.h>
+// #include <google/protobuf/compiler/code_generator.h>
+
+// #pragma GCC diagnostic pop
+
+// using namespace google::protobuf;
+// using namespace google::protobuf::io;
+
+// class ProtocPlugin : public google::protobuf::compiler::CodeGenerator {
+// public:
+//     bool Generate(const google::protobuf::FileDescriptor* file,
+//                   const std::string& parameter,
+//                   google::protobuf::compiler::GeneratorContext* context,
+//                   std::string* error) const override;
+// };
+
+// static std::string StripProto(const std::string& filename) {
+//     if (filename.length() > 6 && filename.substr(filename.length() - 6) == ".proto") {
+//         return filename.substr(0, filename.length() - 6);
+//     }
+//     return filename;
+// }
+
+// static std::string FullNameToCpp(const std::string& full_name) {
+//     std::string result = full_name;
+//     for (char& c : result) {
+//         if (c == '.') c = ':';
+//     }
+//     return "::" + result;
+// }
+
+// bool ProtocPlugin::Generate(
+//     const FileDescriptor* file,
+//     const std::string& /*parameter*/,
+//     compiler::GeneratorContext* context,
+//     std::string* /*error*/) const {
+
+//     if (file->service_count() == 0) return true;
+
+//     std::string header_name = StripProto(file->name()) + ".service.h";
+//     std::unique_ptr<ZeroCopyOutputStream> output(context->Open(header_name));
+//     Printer printer(output.get(), '$');
+
+//     printer.Print("#pragma once\n\n");
+
+//     // Includes
+//     printer.Print("#include \"$pb_header$\"\n", "pb_header", StripProto(file->name()) + ".pb.h");
+//     printer.Print("#include \"client/client_channel.h\"\n\n");
+//     printer.Print("#include <memory>\n");
+//     printer.Print("#include <string>\n\n");
+
+//     // Namespace
+//     std::string ns = file->package();
+//     if (!ns.empty()) {
+//         printer.Print("namespace $ns$ {\n\n", "ns", ns);
+//     }
+
+//     // For each service
+//     for (int i = 0; i < file->service_count(); ++i) {
+//         const ServiceDescriptor* service = file->service(i);
+//         std::string service_name = service->name();
+//         std::string full_service_name = service->full_name();
+
+//         // --- 1. 客户端 Stub ---
+//         printer.Print("// Client Stub for $service_name$\n", "service_name", service_name);
+//         printer.Print("class $service_name$Stub {\n", "service_name", service_name);
+//         printer.Print("public:\n");
+//         printer.Indent();
+//         printer.Print("explicit $service_name$Stub(ClientChannel* channel)\n"
+//                       "    : channel_(channel) {}\n\n",
+//                       "service_name", service_name);
+
+//         for (int j = 0; j < service->method_count(); ++j) {
+//             const MethodDescriptor* method = service->method(j);
+//             std::string method_name = method->name();
+//             std::string input_type = FullNameToCpp(method->input_type()->full_name());
+//             std::string output_type = FullNameToCpp(method->output_type()->full_name());
+//             std::string full_method_name = full_service_name + "." + method_name;
+
+//             printer.Print("$output_type$ $method_name$(const $input_type$* request, ) {\n",
+//                           "output_type", output_type,
+//                           "method_name", method_name,
+//                           "input_type", input_type);
+//             printer.Indent();
+//             printer.Print("auto resp = channel_->call_method(\"$full_method$\", request);\n",
+//                           "full_method", full_method_name);
+//             printer.Print("return *static_cast<$output_type$*>(resp.get());\n",
+//                           "output_type", output_type);
+//             printer.Outdent();
+//             printer.Print("}\n\n");
+//         }
+
+//         printer.Outdent();
+//         printer.Print("\nprivate:\n");
+//         printer.Indent();
+//         printer.Print("ClientChannel* channel_;\n");
+//         printer.Outdent();
+//         printer.Print("};\n\n");
+
+//         // --- 2. 服务端抽象接口 ---
+//         printer.Print("// Service Interface for $service_name$\n", "service_name", service_name);
+//         printer.Print("class $service_name$ServiceInterface {\n", "service_name", service_name);
+//         printer.Print("public:\n");
+//         printer.Indent();
+//         printer.Print("virtual ~$service_name$ServiceInterface() = default;\n\n",
+//                       "service_name", service_name);
+
+//         for (int j = 0; j < service->method_count(); ++j) {
+//             const MethodDescriptor* method = service->method(j);
+//             std::string method_name = method->name();
+//             std::string input_type = FullNameToCpp(method->input_type()->full_name());
+//             std::string output_type = FullNameToCpp(method->output_type()->full_name());
+
+//             printer.Print("virtual $output_type$ $method_name$(const $input_type$& request) = 0;\n",
+//                           "output_type", output_type,
+//                           "method_name", method_name,
+//                           "input_type", input_type);
+//         }
+
+//         printer.Outdent();
+//         printer.Print("};\n\n");
+
+//         // --- 3. 默认服务实现（可选，用于注册）---
+//         printer.Print("// Default implementation that throws\n");
+//         printer.Print("class $service_name$ServiceImpl : public $service_name$ServiceInterface {\n",
+//                       "service_name", service_name);
+//         printer.Print("public:\n");
+//         printer.Indent();
+//         for (int j = 0; j < service->method_count(); ++j) {
+//             const MethodDescriptor* method = service->method(j);
+//             std::string method_name = method->name();
+//             std::string input_type = FullNameToCpp(method->input_type()->full_name());
+//             std::string output_type = FullNameToCpp(method->output_type()->full_name());
+
+//             printer.Print("$output_type$ $method_name$(const $input_type$& /*request*/) override {\n",
+//                           "output_type", output_type,
+//                           "method_name", method_name,
+//                           "input_type", input_type);
+//             printer.Indent();
+//             printer.Print("throw std::runtime_error(\"Method $method_name$ not implemented\");\n",
+//                           "method_name", method_name);
+//             printer.Outdent();
+//             printer.Print("}\n\n");
+//         }
+//         printer.Outdent();
+//         printer.Print("};\n\n");
+
+//         // --- 4. 服务注册辅助函数 ---
+//         printer.Print("// Helper to register service to MyServer\n");
+//         printer.Print("void Register$service_name$Service(MyServer* server, $service_name$ServiceInterface* service) {\n",
+//                       "service_name", service_name);
+//         printer.Indent();
+//         for (int j = 0; j < service->method_count(); ++j) {
+//             const MethodDescriptor* method = service->method(j);
+//             std::string method_name = method->name();
+//             std::string full_method_name = full_service_name + "." + method_name;
+//             std::string input_type = FullNameToCpp(method->input_type()->full_name());
+//             std::string output_type = FullNameToCpp(method->output_type()->full_name());
+
+//             printer.Print("server->RegisterServiceMethod(\n");
+//             printer.Indent();
+//             printer.Print("\"$full_method$\",\n", "full_method", full_method_name);
+//             printer.Print("[service] (const google::protobuf::Message& req) -> std::unique_ptr<google::protobuf::Message> {\n");
+//             printer.Indent();
+//             printer.Print("const auto& typed_req = static_cast<const $input_type$&>(req);\n",
+//                           "input_type", input_type);
+//             printer.Print("auto resp = std::make_unique<$output_type$>(service->$method_name$(typed_req));\n",
+//                           "output_type", output_type,
+//                           "method_name", method_name);
+//             printer.Print("return resp;\n");
+//             printer.Outdent();
+//             printer.Print("});\n\n");
+//             printer.Outdent();
+//         }
+//         printer.Outdent();
+//         printer.Print("}\n\n");
+//     }
+
+//     // Close namespace
+//     if (!ns.empty()) {
+//         printer.Print("}  // namespace $ns$\n\n", "ns", ns);
+//     }
+
+//     return true;
+// }
+
+// int main(int argc, char* argv[]) {
+//     ProtocPlugin generator;
+//     return google::protobuf::compiler::PluginMain(argc, argv, &generator);
+// }
+
 #include <string>
 #include <cctype>
 
@@ -54,7 +254,7 @@ bool ProtocPlugin::Generate(
 
     // Includes
     printer.Print("#include \"$pb_header$\"\n", "pb_header", StripProto(file->name()) + ".pb.h");
-    printer.Print("#include \"my_runtime.h\"\n\n");
+    printer.Print("#include \"client/client_channel.h\"\n\n");
     printer.Print("#include <memory>\n");
     printer.Print("#include <string>\n\n");
 
@@ -75,8 +275,8 @@ bool ProtocPlugin::Generate(
         printer.Print("class $service_name$Stub {\n", "service_name", service_name);
         printer.Print("public:\n");
         printer.Indent();
-        printer.Print("explicit $service_name$Stub(std::shared_ptr<MyChannel> channel)\n"
-                      "    : channel_(std::move(channel)) {}\n\n",
+        printer.Print("explicit $service_name$Stub(xuanqiong::ClientChannel* channel)\n"
+                      "    : channel_(channel) {}\n\n",
                       "service_name", service_name);
 
         for (int j = 0; j < service->method_count(); ++j) {
@@ -86,23 +286,22 @@ bool ProtocPlugin::Generate(
             std::string output_type = FullNameToCpp(method->output_type()->full_name());
             std::string full_method_name = full_service_name + "." + method_name;
 
-            printer.Print("$output_type$ $method_name$(const $input_type$& request) {\n",
+            printer.Print("void $method_name$(const $input_type$* request, $output_type$* response) {\n",
                           "output_type", output_type,
                           "method_name", method_name,
                           "input_type", input_type);
             printer.Indent();
-            printer.Print("auto resp = channel_->Call(\"$full_method$\", request);\n",
-                          "full_method", full_method_name);
-            printer.Print("return *static_cast<$output_type$*>(resp.get());\n",
-                          "output_type", output_type);
+            printer.Print("channel_->call_method(request, response, \"$service_name$\", \"$method_name$\");\n",
+                          "service_name", service_name,
+                          "method_name", method_name);
             printer.Outdent();
-            printer.Print("}\n\n");
+            printer.Print("}\n");
         }
 
         printer.Outdent();
         printer.Print("\nprivate:\n");
         printer.Indent();
-        printer.Print("std::shared_ptr<MyChannel> channel_;\n");
+        printer.Print("xuanqiong::ClientChannel* channel_;\n");
         printer.Outdent();
         printer.Print("};\n\n");
 
@@ -130,59 +329,59 @@ bool ProtocPlugin::Generate(
         printer.Print("};\n\n");
 
         // --- 3. 默认服务实现（可选，用于注册）---
-        printer.Print("// Default implementation that throws\n");
-        printer.Print("class $service_name$ServiceImpl : public $service_name$ServiceInterface {\n",
-                      "service_name", service_name);
-        printer.Print("public:\n");
-        printer.Indent();
-        for (int j = 0; j < service->method_count(); ++j) {
-            const MethodDescriptor* method = service->method(j);
-            std::string method_name = method->name();
-            std::string input_type = FullNameToCpp(method->input_type()->full_name());
-            std::string output_type = FullNameToCpp(method->output_type()->full_name());
+    //     printer.Print("// Default implementation that throws\n");
+    //     printer.Print("class $service_name$ServiceImpl : public $service_name$ServiceInterface {\n",
+    //                   "service_name", service_name);
+    //     printer.Print("public:\n");
+    //     printer.Indent();
+    //     for (int j = 0; j < service->method_count(); ++j) {
+    //         const MethodDescriptor* method = service->method(j);
+    //         std::string method_name = method->name();
+    //         std::string input_type = FullNameToCpp(method->input_type()->full_name());
+    //         std::string output_type = FullNameToCpp(method->output_type()->full_name());
 
-            printer.Print("$output_type$ $method_name$(const $input_type$& /*request*/) override {\n",
-                          "output_type", output_type,
-                          "method_name", method_name,
-                          "input_type", input_type);
-            printer.Indent();
-            printer.Print("throw std::runtime_error(\"Method $method_name$ not implemented\");\n",
-                          "method_name", method_name);
-            printer.Outdent();
-            printer.Print("}\n\n");
-        }
-        printer.Outdent();
-        printer.Print("};\n\n");
+    //         printer.Print("$output_type$ $method_name$(const $input_type$& /*request*/) override {\n",
+    //                       "output_type", output_type,
+    //                       "method_name", method_name,
+    //                       "input_type", input_type);
+    //         printer.Indent();
+    //         printer.Print("throw std::runtime_error(\"Method $method_name$ not implemented\");\n",
+    //                       "method_name", method_name);
+    //         printer.Outdent();
+    //         printer.Print("}\n\n");
+    //     }
+    //     printer.Outdent();
+    //     printer.Print("};\n\n");
 
-        // --- 4. 服务注册辅助函数 ---
-        printer.Print("// Helper to register service to MyServer\n");
-        printer.Print("void Register$service_name$Service(MyServer* server, $service_name$ServiceInterface* service) {\n",
-                      "service_name", service_name);
-        printer.Indent();
-        for (int j = 0; j < service->method_count(); ++j) {
-            const MethodDescriptor* method = service->method(j);
-            std::string method_name = method->name();
-            std::string full_method_name = full_service_name + "." + method_name;
-            std::string input_type = FullNameToCpp(method->input_type()->full_name());
-            std::string output_type = FullNameToCpp(method->output_type()->full_name());
+    //     // --- 4. 服务注册辅助函数 ---
+    //     printer.Print("// Helper to register service to MyServer\n");
+    //     printer.Print("void Register$service_name$Service(MyServer* server, $service_name$ServiceInterface* service) {\n",
+    //                   "service_name", service_name);
+    //     printer.Indent();
+    //     for (int j = 0; j < service->method_count(); ++j) {
+    //         const MethodDescriptor* method = service->method(j);
+    //         std::string method_name = method->name();
+    //         std::string full_method_name = full_service_name + "." + method_name;
+    //         std::string input_type = FullNameToCpp(method->input_type()->full_name());
+    //         std::string output_type = FullNameToCpp(method->output_type()->full_name());
 
-            printer.Print("server->RegisterServiceMethod(\n");
-            printer.Indent();
-            printer.Print("\"$full_method$\",\n", "full_method", full_method_name);
-            printer.Print("[service] (const google::protobuf::Message& req) -> std::unique_ptr<google::protobuf::Message> {\n");
-            printer.Indent();
-            printer.Print("const auto& typed_req = static_cast<const $input_type$&>(req);\n",
-                          "input_type", input_type);
-            printer.Print("auto resp = std::make_unique<$output_type$>(service->$method_name$(typed_req));\n",
-                          "output_type", output_type,
-                          "method_name", method_name);
-            printer.Print("return resp;\n");
-            printer.Outdent();
-            printer.Print("});\n\n");
-            printer.Outdent();
-        }
-        printer.Outdent();
-        printer.Print("}\n\n");
+    //         printer.Print("server->RegisterServiceMethod(\n");
+    //         printer.Indent();
+    //         printer.Print("\"$full_method$\",\n", "full_method", full_method_name);
+    //         printer.Print("[service] (const google::protobuf::Message& req) -> std::unique_ptr<google::protobuf::Message> {\n");
+    //         printer.Indent();
+    //         printer.Print("const auto& typed_req = static_cast<const $input_type$&>(req);\n",
+    //                       "input_type", input_type);
+    //         printer.Print("auto resp = std::make_unique<$output_type$>(service->$method_name$(typed_req));\n",
+    //                       "output_type", output_type,
+    //                       "method_name", method_name);
+    //         printer.Print("return resp;\n");
+    //         printer.Outdent();
+    //         printer.Print("});\n\n");
+    //         printer.Outdent();
+    //     }
+    //     printer.Outdent();
+    //     printer.Print("}\n\n");
     }
 
     // Close namespace

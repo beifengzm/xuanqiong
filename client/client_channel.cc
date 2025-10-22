@@ -48,20 +48,4 @@ Task<ClientPromise> ClientChannel::coro_fn(ClientChannel* channel, std::shared_p
     co_await channel->socket_->async_write();
 }
 
-template<typename Request, typename Response>
-void ClientChannel::call_method(
-    const Request* request,
-    Response* response,
-    const std::string& service_name,
-    const std::string& method_name
-) {
-    // serialize request
-    util::NetOutputStream output_stream = socket_->get_output_stream();
-    // google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
-    request->SerializeToZeroCopyStream(&output_stream);
-
-    auto executor = socket_->executor();
-    executor->spawn(coro_fn(this, socket_));
-}
-
 } // namespace xuanqiong

@@ -13,7 +13,7 @@ class Socket;
 // when the coroutine function starts executing,
 // it begins waiting for the socket read event
 struct InitAwaiter {
-    std::shared_ptr<net::Socket> socket;
+    net::Socket* socket;
 
     bool await_ready() const noexcept { return false; }
     bool await_suspend(std::coroutine_handle<> handle) noexcept;
@@ -25,7 +25,7 @@ struct ReadAwaiter {
 
     bool await_ready() const noexcept { return false; }
     bool await_suspend(std::coroutine_handle<> handle) noexcept;
-    bool await_resume() const noexcept;
+    void await_resume() const noexcept {};
 };
 
 struct WriteAwaiter {

@@ -13,9 +13,9 @@ class Executor;
 class ClientChannel;
 
 struct ClientPromise {
-    std::shared_ptr<net::Socket> socket;
+    net::Socket* socket;
 
-    ClientPromise(ClientChannel* channel, std::shared_ptr<net::Socket> socket) : socket(socket) {}
+    ClientPromise(ClientChannel* channel, net::Socket* socket) : socket(socket) {}
 
     Task<ClientPromise> get_return_object() {
         return Task<ClientPromise>(
@@ -37,7 +37,7 @@ public:
 
     void close();
 
-    static Task<ClientPromise> coro_fn(ClientChannel* channel, std::shared_ptr<net::Socket> socket);
+    static Task<ClientPromise> coro_fn(ClientChannel* channel, net::Socket* socket);
 
     template<typename Request, typename Response>
     void call_method(const Request* request,
@@ -46,7 +46,7 @@ public:
                      const std::string& method_name);
 
 private:
-    std::shared_ptr<net::Socket> socket_;
+    std::unique_ptr<net::Socket> socket_;
 
     DISALLOW_COPY_AND_ASSIGN(ClientChannel);
 };
@@ -64,7 +64,7 @@ void ClientChannel::call_method(
     request->SerializeToZeroCopyStream(&output_stream);
 
     auto executor = socket_->executor();
-    executor->spawn(coro_fn, this, socket_);
+    executor->spawn(coro_fn, this, socket_.get());
 }
 
 } // namespace xuanqiong

@@ -18,8 +18,6 @@ bool ReadAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
     return true;
 }
 
-bool ReadAwaiter::await_resume() const noexcept { return socket->closed(); }
-
 void WriteAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
     auto executor = socket->executor();
     executor->register_event({socket->fd(), EventType::WRITE, handle});

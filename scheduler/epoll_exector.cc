@@ -44,7 +44,8 @@ EpollExecutor::EpollExecutor() {
                     }
                     handle.resume();
                 } else {
-                    auto handle = 
+                    std::cout << "epoll_wait read event: " << events[i].events << std::endl;
+                    auto handle =
                         std::coroutine_handle<>::from_address(events[i].data.ptr);
                     handle.resume();
                 }

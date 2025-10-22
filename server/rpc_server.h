@@ -9,13 +9,10 @@
 
 namespace xuanqiong {
 
-class Scheduler;
-class Executor;
-
 struct ServerPromise {
-    std::shared_ptr<net::Socket> socket;
+    net::Socket* socket;
 
-    ServerPromise(std::shared_ptr<net::Socket> socket) : socket(socket) {}
+    ServerPromise(std::unique_ptr<net::Socket>&& socket) : socket(socket.get()) {}
 
     Task<ServerPromise> get_return_object() {
         return Task<ServerPromise>(std::coroutine_handle<ServerPromise>::from_promise(*this));
@@ -50,7 +47,7 @@ public:
     void start();
 
 private:
-    static Task<ServerPromise> coro_fn(std::shared_ptr<net::Socket> socket);
+    static Task<ServerPromise> coro_fn(std::unique_ptr<net::Socket>&& socket);
 
     net::Accepter accepter_;
     std::unique_ptr<Scheduler> scheduler_;

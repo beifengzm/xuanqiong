@@ -28,16 +28,16 @@ void RpcServer::start() {
 
         // launch a coroutine
         auto executor = scheduler_->alloc_executor();
-        std::shared_ptr<net::Socket> socket = std::make_shared<net::Socket>(connfd, executor);
-        executor->spawn(coro_fn, socket);
+        auto socket = std::make_unique<net::Socket>(connfd, executor);
+        executor->spawn(coro_fn, std::move(socket));
     }
 }
 
 // coroutine function, one for each channel
-Task<ServerPromise> RpcServer::coro_fn(std::shared_ptr<net::Socket> socket) {
+Task<ServerPromise> RpcServer::coro_fn(std::unique_ptr<net::Socket>&& socket) {
     while (true) {
-        bool closed = co_await socket->async_read();
-        if (closed) {
+        co_await socket->async_read();
+        if (socket->closed()) {
             info("connection closed by peer: {}:{}", socket->peer_addr(), socket->peer_port());
             break;
         }

@@ -21,7 +21,7 @@ ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor
 
     fcntl(sockfd, F_SETFL, O_NONBLOCK | O_CLOEXEC);
 
-    socket_ = std::make_shared<net::Socket>(sockfd, executor);
+    socket_ = std::make_unique<net::Socket>(sockfd, executor);
 
     int sendbuf = 512 * 1024;
     net::SocketUtils::setsocketopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sendbuf, sizeof(sendbuf));
@@ -44,8 +44,8 @@ void ClientChannel::close() {
     socket_->close();
 }
 
-Task<ClientPromise> ClientChannel::coro_fn(ClientChannel* channel, std::shared_ptr<net::Socket> socket) {
-    co_await channel->socket_->async_write();
+Task<ClientPromise> ClientChannel::coro_fn(ClientChannel* channel, net::Socket* socket) {
+    co_await socket->async_write();
 }
 
 } // namespace xuanqiong

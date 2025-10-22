@@ -26,9 +26,14 @@ public:
     const std::string& peer_addr() const { return peer_addr_; }
     int peer_port() const { return peer_port_; }
 
+    Executor* executor() const { return executor_; }
+
     void close() {
         shutdown(sockfd_, SHUT_RDWR);
+        closed_ = true;
     }
+
+    bool closed() const { return closed_; }
 
     size_t read_bytes() const {
         return read_buf_.bytes();
@@ -55,6 +60,8 @@ private:
     int local_port_;          // local port
     std::string peer_addr_;   // peer address
     int peer_port_;           // peer port
+
+    bool closed_;             // socket closed
 
     util::InputBuffer read_buf_;    // read buffer
     util::OutputBuffer write_buf_;   // write buffer

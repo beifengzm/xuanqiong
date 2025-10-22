@@ -13,11 +13,9 @@ class Executor;
 class ClientChannel;
 
 struct ClientPromise {
-    int client_fd;
-    Executor* executor_;
+    std::shared_ptr<net::Socket> socket;
 
-    ClientPromise(ClientChannel* channel, int client_fd, Executor* executor)
-        : client_fd(client_fd), executor_(executor) {}
+    ClientPromise(ClientChannel* channel, std::shared_ptr<net::Socket> socket) : socket(socket) {}
 
     Task<ClientPromise> get_return_object() {
         return Task<ClientPromise>(
@@ -25,7 +23,7 @@ struct ClientPromise {
         );
     }
 
-    InitAwaiter initial_suspend() { return {client_fd, executor_}; }
+    InitAwaiter initial_suspend() { return {socket}; }
     std::suspend_never final_suspend() noexcept { return {}; }
     void unhandled_exception() {
         std::terminate();
@@ -43,7 +41,7 @@ public:
         return socket_->get_output_stream();
     }
 
-    static Task<ClientPromise> coro_fn(ClientChannel* channel, int client_fd, Executor* executor);
+    static Task<ClientPromise> coro_fn(ClientChannel* channel, std::shared_ptr<net::Socket> socket);
 
     template<typename Request, typename Response>
     void call_method(const Request* request,
@@ -52,7 +50,7 @@ public:
                      const std::string& method_name);
 
 private:
-    std::unique_ptr<net::Socket> socket_;
+    std::shared_ptr<net::Socket> socket_;
     Executor* executor_;
 
     DISALLOW_COPY_AND_ASSIGN(ClientChannel);

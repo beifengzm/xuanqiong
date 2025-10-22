@@ -7,7 +7,7 @@
 namespace xuanqiong::net {
 
 Socket::Socket(int fd, Executor* executor)
-    : sockfd_(fd), executor_(executor) {
+    : sockfd_(fd), closed_(false), executor_(executor) {
     // get local address
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
@@ -36,17 +36,19 @@ ReadAwaiter Socket::async_read() {
         if (n > 0) {
             continue;
         } else if (n == 0) {
-            return {sockfd_, true, executor_};
+            close();
+            return {this};
         } else {
             // retry
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return {sockfd_, false, executor_};
+                return {this};
             }
             if (errno == EINTR) {
                 continue;
             }
             error("read data, errno: {}", errno);
-            return {sockfd_, true, executor_};
+            close();
+            return {this};
         }
     }
 }
@@ -64,14 +66,14 @@ WriteAwaiter Socket::async_write() {
                 continue;
             }
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return {sockfd_, write_remain, executor_};
+                return {this, write_remain};
             }
             // other error
             error("write data, errno: {}", errno);
-            return {sockfd_, -1, executor_};
+            return {this, -1};
         }
     }
-    return {sockfd_, write_remain, executor_};
+    return {this, write_remain};
 }
 
 } // namespace xuanqiong::net

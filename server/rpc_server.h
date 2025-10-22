@@ -13,17 +13,15 @@ class Scheduler;
 class Executor;
 
 struct ServerPromise {
-    int client_fd;
-    Executor* executor_;
+    std::shared_ptr<net::Socket> socket;
 
-    ServerPromise(int client_fd, Executor* executor)
-        : client_fd(client_fd), executor_(executor) {}
+    ServerPromise(std::shared_ptr<net::Socket> socket) : socket(socket) {}
 
     Task<ServerPromise> get_return_object() {
         return Task<ServerPromise>(std::coroutine_handle<ServerPromise>::from_promise(*this));
     }
 
-    InitAwaiter initial_suspend() { return {client_fd, executor_}; }
+    InitAwaiter initial_suspend() { return {socket}; }
     std::suspend_never final_suspend() noexcept { return {}; }
     void unhandled_exception() {
         std::terminate();
@@ -52,7 +50,7 @@ public:
     void start();
 
 private:
-    static Task<ServerPromise> coro_fn(int client_fd, Executor* executor);
+    static Task<ServerPromise> coro_fn(std::shared_ptr<net::Socket> socket);
 
     net::Accepter accepter_;
     std::unique_ptr<Scheduler> scheduler_;

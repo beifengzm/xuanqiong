@@ -44,7 +44,7 @@ void ClientChannel::close() {
     socket_->close();
 }
 
-Task<ClientPromise> ClientChannel::coro_fn(ClientChannel* channel, int client_fd, Executor* executor) {
+Task<ClientPromise> ClientChannel::coro_fn(ClientChannel* channel, std::shared_ptr<net::Socket> socket) {
     co_await channel->socket_->async_write();
 }
 
@@ -60,7 +60,7 @@ void ClientChannel::call_method(
     // google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
     request->SerializeToZeroCopyStream(&output_stream);
 
-    executor_->spawn(coro_fn(this, socket_->fd(), executor_));
+    executor_->spawn(coro_fn(this, socket_));
 }
 
 } // namespace xuanqiong

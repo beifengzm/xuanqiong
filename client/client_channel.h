@@ -10,12 +10,13 @@
 namespace xuanqiong {
 
 class Executor;
+class ClientChannel;
 
 struct ClientPromise {
     int client_fd;
     Executor* executor_;
 
-    ClientPromise(int client_fd, Executor* executor)
+    ClientPromise(ClientChannel* channel, int client_fd, Executor* executor)
         : client_fd(client_fd), executor_(executor) {}
 
     Task<ClientPromise> get_return_object() {
@@ -41,6 +42,8 @@ public:
     util::NetOutputStream get_output_stream() {
         return socket_->get_output_stream();
     }
+
+    static Task<ClientPromise> coro_fn(ClientChannel* channel, int client_fd, Executor* executor);
 
     template<typename Request, typename Response>
     void call_method(const Request* request,

@@ -44,6 +44,10 @@ void ClientChannel::close() {
     socket_->close();
 }
 
+Task<ClientPromise> ClientChannel::coro_fn(ClientChannel* channel, int client_fd, Executor* executor) {
+    co_await channel->socket_->async_write();
+}
+
 template<typename Request, typename Response>
 void ClientChannel::call_method(
     const Request* request,
@@ -53,8 +57,10 @@ void ClientChannel::call_method(
 ) {
     // serialize request
     util::NetOutputStream output_stream = socket_->get_output_stream();
-    google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
-    request->SerializeToZeroCopyStream(&coded_stream);
+    // google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
+    request->SerializeToZeroCopyStream(&output_stream);
+
+    executor_->spawn(coro_fn(this, socket_->fd(), executor_));
 }
 
 } // namespace xuanqiong

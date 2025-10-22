@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "net/socket.h"
+#include "scheduler/task.h"
 #include "util/output_stream.h"
 
 namespace xuanqiong {
@@ -42,7 +43,7 @@ public:
     }
 
     template<typename Request, typename Response>
-    Task<ClientPromise> call_method(const Request* request,
+    void call_method(const Request* request,
                      Response* response,
                      const std::string& service_name,
                      const std::string& method_name);

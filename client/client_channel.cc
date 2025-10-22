@@ -45,7 +45,7 @@ void ClientChannel::close() {
 }
 
 template<typename Request, typename Response>
-Task<ClientPromise> ClientChannel::call_method(
+void ClientChannel::call_method(
     const Request* request,
     Response* response,
     const std::string& service_name,
@@ -53,11 +53,8 @@ Task<ClientPromise> ClientChannel::call_method(
 ) {
     // serialize request
     util::NetOutputStream output_stream = socket_->get_output_stream();
-    google::protobuf::io::CodedOutputStream adaptor(&output_stream);
-    request->SerializeToZeroCopyStream(&adaptor);
-
-    co_await socket_->async_write();
-    co_await socket_->async_read(response);
+    google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
+    request->SerializeToZeroCopyStream(&coded_stream);
 }
 
 } // namespace xuanqiong

@@ -1,5 +1,6 @@
 #ifdef __APPLE__
 
+#include "util/common.h"
 #include "scheduler/kqueue_executor.h"
 
 #include <sys/event.h>
@@ -7,9 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-
-#include "util/common.h"
-
+#include <utility>
 #include <vector>
 
 namespace xuanqiong {
@@ -72,12 +71,13 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
             break;
         }
         case EventType::WRITE: {
+            void* ptr = new std::pair<int, void*>(event_item.fd, event_item.handle.address());
             EV_SET(&change,
                    static_cast<uintptr_t>(event_item.fd),
                    EVFILT_WRITE,
                    EV_ADD | EV_CLEAR,
                    0, 0,
-                   new std::pair<int, void*>(event_item.fd, event_item.handle.address()));
+                   ptr);
             break;
         }
         case EventType::DELETE: {

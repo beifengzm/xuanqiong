@@ -3,6 +3,13 @@
 
 namespace xuanqiong {
 
+bool RegisterReadAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
+    socket->set_coro_handle(handle.address());
+    auto executor = socket->executor();
+    executor->register_event({EventType::READ, socket});
+    return false;
+}
+
 bool ReadAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
     if (socket->closed()) {
         // read EOF, connection close, destory coroutine

@@ -29,7 +29,9 @@ public:
     Executor* executor() const { return executor_; }
 
     void set_coro_handle(void* handle) { coro_handle_ = handle; }
-    void* coro_handle() const { return coro_handle_; }
+    void resume() const {
+        std::coroutine_handle<>::from_address(coro_handle_).resume();
+    }
 
     void close() {
         shutdown(sockfd_, SHUT_RDWR);

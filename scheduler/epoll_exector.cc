@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "util/common.h"
+#include "net/socket.h"
 #include "scheduler/scheduler.h"
 #include "scheduler/epoll_executor.h"
 
@@ -27,28 +28,9 @@ EpollExecutor::EpollExecutor() {
             error("epoll_wait nready: {}", nready);
             for (int i = 0; i < nready; i++) {
                 // TODO: handle error event
-                if (events[i].events & EPOLLOUT) {
-                    // remove write event
-                    auto write_info =
-                        static_cast<std::pair<int, void*>*>(events[i].data.ptr);
-                    int fd = write_info->first;
-                    auto handle =
-                        std::coroutine_handle<>::from_address(write_info->second);
-                    delete write_info;
-                    struct epoll_event ev;
-                    ev.data.ptr = handle.address();
-                    ev.events = EPOLLIN | EPOLLET;
-                    if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == -1) {
-                        error("epoll_ctl failed: {}", strerror(errno));
-                        continue;
-                    }
-                    handle.resume();
-                } else {
-                    std::cout << "epoll_wait read event: " << events[i].events << std::endl;
-                    auto handle =
-                        std::coroutine_handle<>::from_address(events[i].data.ptr);
-                    handle.resume();
-                }
+                auto sock =
+                    reinterpret_cast<net::Socket*>(events[i].data.ptr);
+                sock->resume();
             }
         }
     });
@@ -70,26 +52,24 @@ void EpollExecutor::stop() {
 
 bool EpollExecutor::register_event(const EventItem& event_item) {
     struct epoll_event ev;
-    ev.data.ptr = event_item.handle.address();
+    ev.data.ptr = event_item.socket;
     switch (event_item.type) {
         case EventType::READ:
             ev.events = EPOLLIN | EPOLLET;  // edge triggered
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, event_item.fd, &ev) == -1) {
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, event_item.socket->fd(), &ev) == -1) {
                 error("epoll_ctl failed: {}", strerror(errno));
                 return false;
             }
             break;
         case EventType::WRITE:
-            ev.data.ptr =
-                new std::pair<int, void*>(event_item.fd, event_item.handle.address());
             ev.events = EPOLLOUT | EPOLLET;
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, event_item.fd, &ev) == -1) {
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, event_item.socket->fd(), &ev) == -1) {
                 error("epoll_ctl failed: {}", strerror(errno));
                 return false;
             }
             break;
         case EventType::DELETE:
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_item.fd, nullptr) == -1) {
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_item.socket->fd(), nullptr) == -1) {
                 error("epoll_ctl failed: {}", strerror(errno));
                 return false;
             }

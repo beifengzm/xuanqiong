@@ -10,6 +10,14 @@ namespace net {
 class Socket;
 }
 
+struct RegisterReadAwaiter {
+    net::Socket* socket;
+
+    bool await_ready() const noexcept { return false; }
+    bool await_suspend(std::coroutine_handle<> handle) noexcept;
+    void await_resume() const noexcept {};
+};
+
 struct ReadAwaiter {
     net::Socket* socket;
 

@@ -33,7 +33,7 @@ void RpcServer::start() {
 }
 
 // coroutine function, one for each channel
-Task<ServerPromise> RpcServer::coro_fn(int fd, Executor* executor) {
+Task RpcServer::coro_fn(int fd, Executor* executor) {
     auto socket = std::make_unique<net::Socket>(fd, executor);
     socket->set_coro_handle(__builtin_coro_frame());
     executor->register_event({EventType::READ, socket.get()});

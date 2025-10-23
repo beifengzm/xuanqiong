@@ -9,19 +9,6 @@
 
 namespace xuanqiong {
 
-struct ServerPromise {
-    Task<ServerPromise> get_return_object() {
-        return Task<ServerPromise>(std::coroutine_handle<ServerPromise>::from_promise(*this));
-    }
-
-    std::suspend_never initial_suspend() { return {}; }
-    std::suspend_never final_suspend() noexcept { return {}; }
-    void unhandled_exception() {
-        std::terminate();
-    }
-    void return_void() {}
-};
-
 struct RpcServerOptions {
     int port;
     int backlog;
@@ -43,7 +30,7 @@ public:
     void start();
 
 private:
-    Task<ServerPromise> coro_fn(int fd, Executor* executor);
+    Task coro_fn(int fd, Executor* executor);
 
     net::Accepter accepter_;
     std::unique_ptr<Scheduler> scheduler_;

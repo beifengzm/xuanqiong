@@ -4,10 +4,20 @@
 
 namespace xuanqiong {
 
-template<typename Promise>
 struct Task {
-    using promise_type = Promise;
-    using HandleType = std::coroutine_handle<Promise>;
+    struct promise_type {
+        Task get_return_object() {
+            return Task(std::coroutine_handle<promise_type>::from_promise(*this));
+        }
+        std::suspend_never initial_suspend() { return {}; }
+        std::suspend_never final_suspend() noexcept { return {}; }
+        void unhandled_exception() {
+            std::terminate();
+        }
+        void return_void() {}
+    };
+
+    using HandleType = std::coroutine_handle<promise_type>;
 
     Task(HandleType handle) : handle_(handle) {}
 

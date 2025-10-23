@@ -10,23 +10,6 @@
 namespace xuanqiong {
 
 class Executor;
-class ClientChannel;
-
-struct ClientPromise {
-
-    Task<ClientPromise> get_return_object() {
-        return Task<ClientPromise>(
-            std::coroutine_handle<ClientPromise>::from_promise(*this)
-        );
-    }
-
-    std::suspend_never initial_suspend() { return {}; }
-    std::suspend_never final_suspend() noexcept { return {}; }
-    void unhandled_exception() {
-        std::terminate();
-    }
-    void return_void() {}
-};
 
 class ClientChannel {
 public:
@@ -34,7 +17,7 @@ public:
 
     void close();
 
-    Task<ClientPromise> coro_fn(net::Socket* socket);
+    Task coro_fn(net::Socket* socket);
 
     template<typename Request, typename Response>
     void call_method(const Request* request,

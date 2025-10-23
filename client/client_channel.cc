@@ -44,8 +44,8 @@ void ClientChannel::close() {
     socket_->close();
 }
 
-Task ClientChannel::coro_fn(net::Socket* socket) {
-    co_await socket->async_write();
+Task ClientChannel::coro_fn() {
+    co_await socket_->async_write();
 }
 
 } // namespace xuanqiong

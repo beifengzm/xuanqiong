@@ -44,7 +44,7 @@ void ClientChannel::close() {
     socket_->close();
 }
 
-Task<ClientPromise> ClientChannel::coro_fn(ClientChannel* channel, net::Socket* socket) {
+Task<ClientPromise> ClientChannel::coro_fn(net::Socket* socket) {
     co_await socket->async_write();
 }
 

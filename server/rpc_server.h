@@ -43,7 +43,7 @@ public:
     void start();
 
 private:
-    static Task<ServerPromise> coro_fn(std::unique_ptr<net::Socket>&& socket);
+    Task<ServerPromise> coro_fn(int fd, Executor* executor);
 
     net::Accepter accepter_;
     std::unique_ptr<Scheduler> scheduler_;

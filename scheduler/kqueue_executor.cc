@@ -31,6 +31,7 @@ KqueueExecutor::KqueueExecutor() {
                 error("kevent wait failed: %s", strerror(errno));
                 continue;
             }
+            info("kevent wait {} events", nready);
             for (int i = 0; i < nready; ++i) {
                 auto socket = static_cast<net::Socket*>(events[i].udata);
                 if (socket == nullptr) {
@@ -81,6 +82,7 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
             break;
         }
         case EventType::DELETE: {
+            info("delete event for fd=%d", event_item.socket->fd());
             EV_SET(&change,
                    static_cast<uintptr_t>(event_item.socket->fd()),
                    EVFILT_READ,

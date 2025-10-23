@@ -34,7 +34,7 @@ public:
 
     void close();
 
-    static Task<ClientPromise> coro_fn(ClientChannel* channel, net::Socket* socket);
+    Task<ClientPromise> coro_fn(net::Socket* socket);
 
     template<typename Request, typename Response>
     void call_method(const Request* request,
@@ -61,7 +61,7 @@ void ClientChannel::call_method(
     request->SerializeToZeroCopyStream(&output_stream);
 
     auto executor = socket_->executor();
-    executor->spawn(coro_fn, this, socket_.get());
+    executor->spawn(&ClientChannel::coro_fn, this, socket_.get());
 }
 
 } // namespace xuanqiong

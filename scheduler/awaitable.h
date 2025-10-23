@@ -10,16 +10,6 @@ namespace net {
 class Socket;
 }
 
-// when the coroutine function starts executing,
-// it begins waiting for the socket read event
-// struct InitAwaiter {
-//     net::Socket* socket;
-
-//     bool await_ready() const noexcept { return false; }
-//     bool await_suspend(std::coroutine_handle<> handle) noexcept;
-//     bool await_resume() const noexcept { return false; }
-// };
-
 struct ReadAwaiter {
     net::Socket* socket;
 

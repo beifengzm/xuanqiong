@@ -55,7 +55,7 @@ ReadAwaiter Socket::async_read() {
 
 WriteAwaiter Socket::async_write() {
     int write_remain = write_buf_.bytes();
-        info("async_write, write_remain: {}", write_remain);
+        info("[start] async_write, write_remain: {}", write_remain);
     while (write_remain > 0) {
         int n = write_buf_.write_to(sockfd_);
         if (n >= 0) {
@@ -74,7 +74,7 @@ WriteAwaiter Socket::async_write() {
             return {this, -1};
         }
     }
-    info("async_write done, write_remain: {}", write_remain);
+    info("[end] async_write done, write_remain: {}", write_remain);
     return {this, write_remain};
 }
 

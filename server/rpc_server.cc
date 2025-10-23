@@ -28,14 +28,14 @@ void RpcServer::start() {
 
         // launch a coroutine
         auto executor = scheduler_->alloc_executor();
-        auto socket = std::make_unique<net::Socket>(connfd, executor);
-        executor->spawn(coro_fn, std::move(socket));
+        executor->spawn(&RpcServer::coro_fn, this, connfd, executor);
     }
 }
 
 // coroutine function, one for each channel
-Task<ServerPromise> RpcServer::coro_fn(std::unique_ptr<net::Socket>&& socket) {
-    auto executor = socket->executor();
+Task<ServerPromise> RpcServer::coro_fn(int fd, Executor* executor) {
+    auto socket = std::make_unique<net::Socket>(fd, executor);
+    socket->set_coro_handle(__builtin_coro_frame());
     executor->register_event({EventType::READ, socket.get()});
     while (true) {
         co_await socket->async_read();

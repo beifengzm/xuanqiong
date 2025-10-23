@@ -55,7 +55,6 @@ void ClientChannel::call_method(
     const std::string& service_name,
     const std::string& method_name
 ) {
-    // serialize request
     util::NetOutputStream output_stream = socket_->get_output_stream();
     google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
 

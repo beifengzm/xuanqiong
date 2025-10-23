@@ -79,11 +79,34 @@ add_library(rpc_server STATIC ${SERVER_SRCS})
 file(GLOB CLIENT_SRCS "client/*.cc")
 add_library(rpc_client STATIC ${CLIENT_SRCS})
 
-gen_proto(example PROTO_SRCS PROTO_HDRS)
-add_library(echo_proto STATIC ${PROTO_SRCS} ${PROTO_HDRS})
+gen_proto(example ECHO_SRCS ECHO_HDRS)
+add_library(echo_proto STATIC ${ECHO_SRCS} ${ECHO_HDRS})
+
+gen_proto(proto PROTO_SRCS PROTO_HDRS)
+add_library(message_proto STATIC ${PROTO_SRCS} ${PROTO_HDRS})
 
 add_executable(echo_server "example/echo_server.cc")
-target_link_libraries(echo_server rpc_server echo_proto net util sched pthread protobuf::libprotobuf)
+target_link_libraries(
+    echo_server
+    rpc_server
+    echo_proto
+    message_proto
+    net
+    util
+    sched
+    pthread
+    protobuf::libprotobuf
+)
 
 add_executable(echo_client "example/echo_client.cc")
-target_link_libraries(echo_client rpc_client echo_proto net util sched pthread protobuf::libprotobuf)
+target_link_libraries(
+    echo_client
+    rpc_client
+    echo_proto
+    message_proto
+    net
+    util
+    sched
+    pthread
+    protobuf::libprotobuf
+)

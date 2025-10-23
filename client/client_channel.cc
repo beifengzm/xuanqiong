@@ -6,6 +6,7 @@
 #include "util/common.h"
 #include "net/socket_utils.h"
 #include "client/client_channel.h"
+#include "proto/message.pb.h"
 
 namespace xuanqiong {
 
@@ -46,6 +47,33 @@ void ClientChannel::close() {
 
 Task ClientChannel::coro_fn() {
     co_await socket_->async_write();
+}
+
+void ClientChannel::call_method(
+    const google::protobuf::Message* request,
+    google::protobuf::Message* response,
+    const std::string& service_name,
+    const std::string& method_name
+) {
+    // serialize request
+    util::NetOutputStream output_stream = socket_->get_output_stream();
+    google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
+
+    // serialize header
+    proto::Header header;
+    header.set_magic(0x12345678);
+    header.set_version(1);
+    header.set_service_name(service_name);
+    header.set_method_name(method_name);
+    coded_stream.WriteVarint32(header.ByteSizeLong());
+    header.SerializeToCodedStream(&coded_stream);
+
+    // serialize request
+    coded_stream.WriteVarint32(request->ByteSizeLong());
+    request->SerializeToCodedStream(&coded_stream);
+
+    auto executor = socket_->executor();
+    executor->spawn(&ClientChannel::coro_fn, this);
 }
 
 } // namespace xuanqiong

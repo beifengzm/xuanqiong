@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <google/protobuf/message.h>
 
 #include "net/socket.h"
 #include "scheduler/task.h"
@@ -19,9 +20,8 @@ public:
 
     Task coro_fn();
 
-    template<typename Request, typename Response>
-    void call_method(const Request* request,
-                     Response* response,
+    void call_method(const google::protobuf::Message* request,
+                     google::protobuf::Message* response,
                      const std::string& service_name,
                      const std::string& method_name);
 
@@ -30,21 +30,5 @@ private:
 
     DISALLOW_COPY_AND_ASSIGN(ClientChannel);
 };
-
-template<typename Request, typename Response>
-void ClientChannel::call_method(
-    const Request* request,
-    Response* response,
-    const std::string& service_name,
-    const std::string& method_name
-) {
-    // serialize request
-    util::NetOutputStream output_stream = socket_->get_output_stream();
-    // google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
-    request->SerializeToZeroCopyStream(&output_stream);
-
-    auto executor = socket_->executor();
-    executor->spawn(&ClientChannel::coro_fn, this);
-}
 
 } // namespace xuanqiong

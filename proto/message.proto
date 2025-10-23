@@ -1,0 +1,11 @@
+// message.proto
+syntax = "proto3";
+
+package xuanqiong.proto;
+
+message Header {
+    uint64 magic = 1;
+    int32 version = 2;
+    string service_name = 3;
+    string method_name = 4;
+}

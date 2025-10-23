@@ -45,7 +45,13 @@ Task RpcServer::coro_fn(int fd, Executor* executor) {
             info("connection closed by peer: {}:{}", socket->peer_addr(), socket->peer_port());
             break;
         }
-        info("read {} bytes", socket->read_bytes());
+
+        // deserialize request
+        auto request = std::make_unique<EchoRequest>();
+        if (!request->ParseFromString(socket->read_buffer())) {
+            error("error occurred in parse request: %s", strerror(errno));
+            continue;
+        }
     }
 }
 

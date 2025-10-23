@@ -34,24 +34,19 @@ void RpcServer::start() {
 
 // coroutine function, one for each channel
 Task RpcServer::coro_fn(int fd, Executor* executor) {
-    auto socket = std::make_unique<net::Socket>(fd, executor);
+    net::Socket socket(fd, executor);
 
     // register read event
-    co_await RegisterReadAwaiter{socket.get()};
+    co_await RegisterReadAwaiter{&socket};
 
     while (true) {
-        co_await socket->async_read();
-        if (socket->closed()) {
-            info("connection closed by peer: {}:{}", socket->peer_addr(), socket->peer_port());
+        co_await socket.async_read();
+        if (socket.closed()) {
+            info("connection closed by peer: {}:{}", socket.peer_addr(), socket.peer_port());
             break;
         }
 
-        // deserialize request
-        auto request = std::make_unique<EchoRequest>();
-        if (!request->ParseFromString(socket->read_buffer())) {
-            error("error occurred in parse request: %s", strerror(errno));
-            continue;
-        }
+        info("read {} bytes", socket.read_bytes());
     }
 }
 

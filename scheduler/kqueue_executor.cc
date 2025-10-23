@@ -1,8 +1,5 @@
 #ifdef __APPLE__
 
-#include "util/common.h"
-#include "scheduler/kqueue_executor.h"
-
 #include <sys/event.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -10,6 +7,10 @@
 #include <errno.h>
 #include <utility>
 #include <vector>
+
+#include "util/common.h"
+#include "net/socket.h"
+#include "scheduler/kqueue_executor.h"
 
 namespace xuanqiong {
 
@@ -31,11 +32,11 @@ KqueueExecutor::KqueueExecutor() {
                 continue;
             }
             for (int i = 0; i < nready; ++i) {
-                void* udata = events[i].udata;
-                if (udata == nullptr) {
+                auto socket = static_cast<net::Socket*>(events[i].udata);
+                if (socket == nullptr) {
                     continue;
                 }
-                auto handle = std::coroutine_handle<>::from_address(udata);
+                auto handle = std::coroutine_handle<>::from_address(socket->coro_handle());
                 handle.resume();
             }
         }
@@ -63,26 +64,25 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
     switch (event_item.type) {
         case EventType::READ: {
             EV_SET(&change,
-                   static_cast<uintptr_t>(event_item.fd),
+                   static_cast<uintptr_t>(event_item.socket->fd()),
                    EVFILT_READ,
                    EV_ADD | EV_CLEAR,
                    0, 0,
-                   event_item.handle.address());
+                   static_cast<void*>(event_item.socket));
             break;
         }
         case EventType::WRITE: {
-            void* ptr = new std::pair<int, void*>(event_item.fd, event_item.handle.address());
             EV_SET(&change,
-                   static_cast<uintptr_t>(event_item.fd),
+                   static_cast<uintptr_t>(event_item.socket->fd()),
                    EVFILT_WRITE,
                    EV_ADD | EV_CLEAR,
                    0, 0,
-                   ptr);
+                   static_cast<void*>(event_item.socket));
             break;
         }
         case EventType::DELETE: {
             EV_SET(&change,
-                   static_cast<uintptr_t>(event_item.fd),
+                   static_cast<uintptr_t>(event_item.socket->fd()),
                    EVFILT_READ,
                    EV_DELETE,
                    0, 0,
@@ -90,7 +90,7 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
             kevent(kq_fd_, &change, 1, nullptr, 0, nullptr); // ignore errors
 
             EV_SET(&change,
-                   static_cast<uintptr_t>(event_item.fd),
+                   static_cast<uintptr_t>(event_item.socket->fd()),
                    EVFILT_WRITE,
                    EV_DELETE,
                    0, 0,
@@ -110,7 +110,7 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
 
     if (kevent(kq_fd_, &change, 1, nullptr, 0, nullptr) == -1) {
         error("kevent register failed for fd=%d, type=%d: %s",
-              event_item.fd, static_cast<int>(event_item.type), strerror(errno));
+              event_item.socket->fd(), static_cast<int>(event_item.type), strerror(errno));
         return false;
     }
 

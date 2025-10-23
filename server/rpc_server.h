@@ -10,15 +10,11 @@
 namespace xuanqiong {
 
 struct ServerPromise {
-    net::Socket* socket;
-
-    ServerPromise(std::unique_ptr<net::Socket>&& socket) : socket(socket.get()) {}
-
     Task<ServerPromise> get_return_object() {
         return Task<ServerPromise>(std::coroutine_handle<ServerPromise>::from_promise(*this));
     }
 
-    InitAwaiter initial_suspend() { return {socket}; }
+    std::suspend_never initial_suspend() { return {}; }
     std::suspend_never final_suspend() noexcept { return {}; }
     void unhandled_exception() {
         std::terminate();

@@ -28,6 +28,9 @@ public:
 
     Executor* executor() const { return executor_; }
 
+    void set_coro_handle(void* handle) { coro_handle_ = handle; }
+    void* coro_handle() const { return coro_handle_; }
+
     void close() {
         shutdown(sockfd_, SHUT_RDWR);
         closed_ = true;
@@ -67,6 +70,7 @@ private:
     util::OutputBuffer write_buf_;   // write buffer
 
     Executor* executor_;      // coroutine executor
+    void* coro_handle_;       // coroutine handle
 
     DISALLOW_COPY_AND_ASSIGN(Socket);
 };

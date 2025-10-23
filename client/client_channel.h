@@ -13,9 +13,6 @@ class Executor;
 class ClientChannel;
 
 struct ClientPromise {
-    net::Socket* socket;
-
-    ClientPromise(ClientChannel* channel, net::Socket* socket) : socket(socket) {}
 
     Task<ClientPromise> get_return_object() {
         return Task<ClientPromise>(
@@ -23,7 +20,7 @@ struct ClientPromise {
         );
     }
 
-    InitAwaiter initial_suspend() { return {socket}; }
+    std::suspend_never initial_suspend() { return {}; }
     std::suspend_never final_suspend() noexcept { return {}; }
     void unhandled_exception() {
         std::terminate();

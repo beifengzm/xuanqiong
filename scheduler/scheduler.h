@@ -8,6 +8,10 @@
 
 namespace xuanqiong {
 
+namespace net {
+class Socket;
+}
+
 enum struct EventType : uint8_t {
     READ,
     DELETE,     // remove fd from scheduler
@@ -16,9 +20,8 @@ enum struct EventType : uint8_t {
 };
 
 struct EventItem {
-    int fd;
     EventType type;
-    std::coroutine_handle<> handle;
+    net::Socket* socket;
 };
 
 // one Executor corresponds to one Thread, a group of Coroutines

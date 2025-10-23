@@ -35,6 +35,8 @@ void RpcServer::start() {
 
 // coroutine function, one for each channel
 Task<ServerPromise> RpcServer::coro_fn(std::unique_ptr<net::Socket>&& socket) {
+    auto executor = socket->executor();
+    executor->register_event({EventType::READ, socket.get()});
     while (true) {
         co_await socket->async_read();
         if (socket->closed()) {

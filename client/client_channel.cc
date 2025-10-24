@@ -64,6 +64,7 @@ void ClientChannel::call_method(
     header.set_version(1);
     header.set_service_name(service_name);
     header.set_method_name(method_name);
+    info("header len: {}", header.ByteSizeLong());
     coded_stream.WriteVarint32(header.ByteSizeLong());
     header.SerializeToCodedStream(&coded_stream);
 

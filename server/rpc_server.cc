@@ -1,12 +1,15 @@
 
 #include <string.h>
 #include <fcntl.h>
+#include <google/protobuf/io/coded_stream.h>
 
 #include "util/common.h"
+#include "proto/message.pb.h"
 #include "server/rpc_server.h"
 #include "net/socket_utils.h"
 #include "net/socket.h"
 #include "scheduler/scheduler.h"
+#include "example/echo.pb.h"
 
 namespace xuanqiong {
 
@@ -46,7 +49,49 @@ Task RpcServer::coro_fn(int fd, Executor* executor) {
             break;
         }
 
-        info("read {} bytes", socket.read_bytes());
+        // deserialize message
+        auto input_stream = socket.get_input_stream();
+        google::protobuf::io::CodedInputStream coded_stream(&input_stream);
+
+        // deserialize header
+        uint32_t header_len;
+        if (!coded_stream.ReadVarint32(&header_len)) {
+            error("failed to read header len");
+            continue;
+        }
+        if (socket.read_bytes() < header_len) {
+            continue;
+        }
+
+        info("header len: {}", header_len);
+        auto limit = coded_stream.PushLimit(header_len);
+        proto::Header header;
+        if (!header.ParseFromCodedStream(&coded_stream)) {
+            error("failed to parse header");
+            continue;
+        }
+        coded_stream.PopLimit(limit);
+        info("header: {}", header.DebugString());
+
+        // deserialize request
+        uint32_t request_len;
+        if (!coded_stream.ReadVarint32(&request_len)) {
+            error("failed to read request len");
+            continue;
+        }
+        if (socket.read_bytes() < request_len) {
+            continue;
+        }
+
+        info("request len: {}", request_len);
+        limit = coded_stream.PushLimit(request_len);
+        EchoRequest request;
+        if (!request.ParseFromCodedStream(&coded_stream)) {
+            error("failed to parse request");
+            continue;
+        }
+        coded_stream.PopLimit(limit);
+        info("request: {}", request.DebugString());
     }
 }
 

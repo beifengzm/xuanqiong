@@ -37,8 +37,7 @@ KqueueExecutor::KqueueExecutor() {
                 if (socket == nullptr) {
                     continue;
                 }
-                auto handle = std::coroutine_handle<>::from_address(socket->coro_handle());
-                handle.resume();
+                socket->resume();
             }
         }
     });

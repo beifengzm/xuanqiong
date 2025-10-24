@@ -18,7 +18,7 @@ int main() {
 
     while (true) {
         std::string data(16, 'a');
-        for (int i = 0; i < 100; ++i) {
+        for (int i = 0; i < 1; ++i) {
             EchoRequest request;
             request.set_message(data.data());
             EchoServiceStub stub(&channel);

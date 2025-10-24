@@ -23,7 +23,7 @@ public:
     void call_method(const google::protobuf::Message* request,
                      google::protobuf::Message* response,
                      const std::string& service_name,
-                     const std::string& method_name);
+                     int method_id);
 
 private:
     std::unique_ptr<net::Socket> socket_;

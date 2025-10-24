@@ -23,7 +23,7 @@ int main() {
             request.set_message(data.data());
             EchoServiceStub stub(&channel);
             EchoResponse response;
-            stub.Echo(&request, &response);
+            stub.Echo1(&request, &response);
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }

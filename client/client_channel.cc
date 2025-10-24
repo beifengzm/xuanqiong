@@ -53,7 +53,7 @@ void ClientChannel::call_method(
     const google::protobuf::Message* request,
     google::protobuf::Message* response,
     const std::string& service_name,
-    const std::string& method_name
+    int method_id
 ) {
     util::NetOutputStream output_stream = socket_->get_output_stream();
     google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
@@ -63,7 +63,7 @@ void ClientChannel::call_method(
     header.set_magic(0x12345678);
     header.set_version(1);
     header.set_service_name(service_name);
-    header.set_method_name(method_name);
+    header.set_method_id(method_id);
     info("header len: {}", header.ByteSizeLong());
     coded_stream.WriteVarint32(header.ByteSizeLong());
     header.SerializeToCodedStream(&coded_stream);

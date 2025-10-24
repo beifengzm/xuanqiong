@@ -72,7 +72,7 @@ bool ProtocPlugin::Generate(
         std::string service_name = service->name();
         std::string full_service_name = service->full_name();
 
-        // --- 1. 客户端 Stub ---
+        // --- 1. Client Stub ---
         printer.Print("// Client Stub for $service_name$\n", "service_name", service_name);
         printer.Print("class $service_name$Stub {\n", "service_name", service_name);
         printer.Print("public:\n");
@@ -93,9 +93,9 @@ bool ProtocPlugin::Generate(
                           "method_name", method_name,
                           "input_type", input_type);
             printer.Indent();
-            printer.Print("channel_->call_method(request, response, \"$service_name$\", \"$method_name$\");\n",
+            printer.Print("channel_->call_method(request, response, \"$service_name$\", $method_id$);\n",
                           "service_name", service_name,
-                          "method_name", method_name);
+                          "method_id", std::to_string(j));
             printer.Outdent();
             printer.Print("}\n");
         }
@@ -107,12 +107,12 @@ bool ProtocPlugin::Generate(
         printer.Outdent();
         printer.Print("};\n\n");
 
-        // --- 2. 服务端抽象接口 ---
+        // --- 2. Server Interface ---
         printer.Print("// Service Interface for $service_name$\n", "service_name", service_name);
-        printer.Print("class $service_name$ServiceInterface {\n", "service_name", service_name);
+        printer.Print("class $service_name$Interface {\n", "service_name", service_name);
         printer.Print("public:\n");
         printer.Indent();
-        printer.Print("virtual ~$service_name$ServiceInterface() = default;\n\n",
+        printer.Print("virtual ~$service_name$Interface() = default;\n\n",
                       "service_name", service_name);
 
         for (int j = 0; j < service->method_count(); ++j) {
@@ -121,14 +121,48 @@ bool ProtocPlugin::Generate(
             std::string input_type = FullNameToCpp(method->input_type()->full_name());
             std::string output_type = FullNameToCpp(method->output_type()->full_name());
 
-            printer.Print("virtual $output_type$ $method_name$(const $input_type$& request) = 0;\n",
+            printer.Print("virtual void $method_name$(const $input_type$* request, $output_type$* response) = 0;\n",
                           "output_type", output_type,
                           "method_name", method_name,
                           "input_type", input_type);
         }
 
+        // call_method helper
+        printer.Print("\n");
+        printer.Print("void call_method(\n");
+        printer.Print("  const google::protobuf::Message* request,\n");
+        printer.Print("  google::protobuf::Message* response,\n");
+        printer.Print("  int method_id\n");
+        printer.Print(") {\n");
+        printer.Indent();
+        printer.Print("switch (method_id) {\n");
+        printer.Indent();
+        for (int j = 0; j < service->method_count(); ++j) {
+            const MethodDescriptor* method = service->method(j);
+            std::string method_name = method->name();
+            std::string input_type = FullNameToCpp(method->input_type()->full_name());
+            std::string output_type = FullNameToCpp(method->output_type()->full_name());
+
+            printer.Print("case $method_id$:\n", "method_id", std::to_string(j));
+            printer.Indent();
+            printer.Print("$method_name$(\n", "method_name", method_name);
+            printer.Indent();
+            printer.Print("static_cast<const $input_type$*>(request),\n", "input_type", input_type);
+            printer.Print("static_cast<$output_type$*>(response)\n", "output_type", output_type);
+            printer.Outdent();
+            printer.Print(");\n");
+            printer.Outdent();
+        }
+        printer.Print("default:\n");
+        printer.Indent();
+        printer.Print("break;\n");
         printer.Outdent();
-        printer.Print("};\n\n");
+        printer.Outdent();
+        printer.Print("}\n");
+        printer.Outdent();
+        printer.Print("}\n\n");
+        printer.Outdent();
+        printer.Print("};\n");
 
         // --- 3. 默认服务实现（可选，用于注册）---
     //     printer.Print("// Default implementation that throws\n");

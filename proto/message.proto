@@ -7,5 +7,5 @@ message Header {
     uint64 magic = 1;
     int32 version = 2;
     string service_name = 3;
-    string method_name = 4;
+    int32 method_id = 4;
 }

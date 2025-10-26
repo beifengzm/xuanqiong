@@ -23,15 +23,15 @@ bool OutputBuffer::next(void** data, int* size) {
     if (last_block_->end == kBlockSize) {
         last_block_->next = new BufferBlock;
         last_block_ = last_block_->next;
-        info("[next] new block");
+        // info("[next] new block");
     }
     *data = last_block_->data + last_block_->end;
     *size = kBlockSize - last_block_->end;
     to_write_bytes_ += *size;
     total_bytes_ += *size;
     last_block_->end += *size;
-    info("[next] size: {}, total_bytes: {}, to_write_bytes: {}, last_block_end: {}",
-        *size, total_bytes_, to_write_bytes_, last_block_->end);
+    // info("[next] size: {}, total_bytes: {}, to_write_bytes: {}, last_block_end: {}",
+    //     *size, total_bytes_, to_write_bytes_, last_block_->end);
     return true;
 }
 
@@ -40,8 +40,8 @@ void OutputBuffer::back_up(int count) {
     to_write_bytes_ -= to_backup;
     total_bytes_ -= to_backup;
     last_block_->end -= to_backup;
-    info("[back_up] count: {}, to_backup: {}, total_bytes: {}, to_write_bytes: {}, last_block_end: {}",
-        count, to_backup, total_bytes_, to_write_bytes_, last_block_->end);
+    // info("[back_up] count: {}, to_backup: {}, total_bytes: {}, to_write_bytes: {}, last_block_end: {}",
+    //     count, to_backup, total_bytes_, to_write_bytes_, last_block_->end);
 }
 
 void OutputBuffer::append(const void* data, int size) {
@@ -74,8 +74,8 @@ int OutputBuffer::write_to(int fd) {
         return nwrite;
     }
 
-    info("[write] nwrite: {}, total_bytes: {}, to_write_bytes: {}",
-        nwrite, total_bytes_, to_write_bytes_);
+    // info("[write] nwrite: {}, total_bytes: {}, to_write_bytes: {}",
+    //     nwrite, total_bytes_, to_write_bytes_);
 
     int left = nwrite;
     to_write_bytes_ -= nwrite;
@@ -91,7 +91,7 @@ int OutputBuffer::write_to(int fd) {
             auto next_block = cur_block_->next;
             delete cur_block_;
             cur_block_ = next_block;
-            info("[write] delete block");
+            // info("[write] delete block");
         }
     }
 

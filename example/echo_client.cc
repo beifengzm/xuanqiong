@@ -16,16 +16,15 @@ int main() {
     auto executor = scheduler.alloc_executor();
     ClientChannel channel("127.0.0.1", 8888, executor);
 
-    while (true) {
-        std::string data(16, 'a');
-        for (int i = 0; i < 1; ++i) {
-            EchoRequest request;
-            request.set_message(data.data());
-            EchoService_Stub stub(&channel);
-            auto response = new EchoResponse;
-            RpcController controller;
-            stub.Echo1(&controller, &request, response, nullptr);
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
+    std::string data("echo request");
+    for (int i = 0; i < 1000; ++i) {
+        EchoRequest request;
+        request.set_message(data.data() + std::to_string(i));
+        EchoService_Stub stub(&channel);
+        auto response = new EchoResponse;
+        RpcController controller;
+        stub.Echo(&controller, &request, response, nullptr);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 }

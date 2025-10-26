@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <queue>
 #include <exception>
 #include <google/protobuf/service.h>
 
@@ -9,6 +10,10 @@
 #include "scheduler/awaitable.h"
 
 namespace xuanqiong {
+
+namespace net {
+class Socket;
+}
 
 struct RpcServerOptions {
     int port;
@@ -35,7 +40,10 @@ public:
     void start();
 
 private:
-    Task coro_fn(int fd, Executor* executor);
+    Task recv_fn(std::shared_ptr<net::Socket> socket);
+    Task send_fn(std::shared_ptr<net::Socket> socket);
+
+    std::queue<std::shared_ptr<net::Socket>> send_queue_;
 
     net::Accepter accepter_;
     std::unique_ptr<Scheduler> scheduler_;

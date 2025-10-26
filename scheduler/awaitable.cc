@@ -4,7 +4,7 @@
 namespace xuanqiong {
 
 bool RegisterReadAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
-    socket->set_coro_handle(handle.address());
+    socket->set_read_handle(handle.address());
     auto executor = socket->executor();
     executor->register_event({EventType::READ, socket});
     return false;
@@ -21,9 +21,17 @@ bool ReadAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
 }
 
 void WriteAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
-    socket->set_coro_handle(handle.address());
+    socket->set_write_handle(handle.address());
     auto executor = socket->executor();
     executor->register_event({EventType::WRITE, socket});
+}
+
+bool WaitWriteAwaiter::await_ready() const noexcept {
+    return socket->closed() || socket->write_bytes() > 0;
+}
+
+void WaitWriteAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
+    socket->set_write_handle(handle.address());
 }
 
 } // namespace xuanqiong

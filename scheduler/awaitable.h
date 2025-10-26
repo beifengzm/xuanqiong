@@ -38,4 +38,13 @@ struct WriteAwaiter {
     }
 };
 
+// wait for write data ready
+struct WaitWriteAwaiter {
+    net::Socket* socket;
+
+    bool await_ready() const noexcept;
+    void await_suspend(std::coroutine_handle<> handle) noexcept;
+    void await_resume() const noexcept {};
+};
+
 } // namespace xuanqiong

@@ -28,9 +28,14 @@ public:
 
     Executor* executor() const { return executor_; }
 
-    void set_coro_handle(void* handle) { coro_handle_ = handle; }
-    void resume() const {
-        std::coroutine_handle<>::from_address(coro_handle_).resume();
+    // set and resume read/write coroutine handle
+    void set_read_handle(void* handle) { read_handle_ = handle; }
+    void set_write_handle(void* handle) { write_handle_ = handle; }
+    void resume_read() const {
+        std::coroutine_handle<>::from_address(read_handle_).resume();
+    }
+    void resume_write() const {
+        std::coroutine_handle<>::from_address(write_handle_).resume();
     }
 
     void close() {
@@ -72,7 +77,8 @@ private:
     util::OutputBuffer write_buf_;   // write buffer
 
     Executor* executor_;      // coroutine executor
-    void* coro_handle_;       // coroutine handle
+    void* read_handle_;       // read coroutine handle
+    void* write_handle_;       // write coroutine handle
 
     DISALLOW_COPY_AND_ASSIGN(Socket);
 };

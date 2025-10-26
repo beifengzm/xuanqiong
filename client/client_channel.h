@@ -18,7 +18,8 @@ public:
 
     void close();
 
-    Task coro_fn();
+    Task recv_fn();
+    Task send_fn();
 
     void CallMethod(
         const google::protobuf::MethodDescriptor* method,
@@ -30,6 +31,7 @@ public:
 
 private:
     std::unique_ptr<net::Socket> socket_;
+    std::unordered_map<int64_t, google::protobuf::Message*> id2response_;
     int64_t request_id_ = 0;
 
     DISALLOW_COPY_AND_ASSIGN(ClientChannel);

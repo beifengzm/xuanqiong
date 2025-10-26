@@ -6,8 +6,12 @@
 
 namespace xuanqiong::net {
 
-Socket::Socket(int fd, Executor* executor)
-    : sockfd_(fd), closed_(false), executor_(executor), coro_handle_(nullptr) {
+Socket::Socket(int fd, Executor* executor) :
+    sockfd_(fd),
+    closed_(false),
+    executor_(executor),
+    read_handle_(nullptr),
+    write_handle_(nullptr) {
     // get local address
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);

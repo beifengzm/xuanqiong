@@ -22,9 +22,9 @@ int main() {
             EchoRequest request;
             request.set_message(data.data());
             EchoService_Stub stub(&channel);
-            EchoResponse response;
+            auto response = new EchoResponse;
             RpcController controller;
-            stub.Echo1(&controller, &request, &response, nullptr);
+            stub.Echo1(&controller, &request, response, nullptr);
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }

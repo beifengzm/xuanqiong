@@ -27,10 +27,32 @@ EpollExecutor::EpollExecutor() {
             }
             error("epoll_wait nready: {}", nready);
             for (int i = 0; i < nready; i++) {
-                // TODO: handle error event
-                auto sock =
+                auto socket =
                     reinterpret_cast<net::Socket*>(events[i].data.ptr);
-                sock->resume();
+                if (events[i].events & (EPOLLHUP | EPOLLRDHUP)) {
+                    // handle error event
+                    socket->close();
+                    if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket->fd(), nullptr) == -1) {
+                        error("epoll_ctl failed: {}", strerror(errno));
+                        continue;
+                    }
+                    continue;
+                }
+                if (events[i].events & EPOLLOUT) {
+                    // handle write event
+                    struct epoll_event ev;
+                    ev.data.ptr = socket;
+                    ev.events = EPOLLIN | EPOLLET;
+                    if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, socket->fd(), &ev) == -1) {
+                        error("epoll_ctl failed: {}", strerror(errno));
+                        continue;
+                    }
+                    socket->resume_write();
+                }
+                if (events[i].events & EPOLLIN) {
+                    // handle read event
+                    socket->resume_read();
+                }
             }
         }
     });
@@ -62,7 +84,7 @@ bool EpollExecutor::register_event(const EventItem& event_item) {
             }
             break;
         case EventType::WRITE:
-            ev.events = EPOLLOUT | EPOLLET;
+            ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
             if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, event_item.socket->fd(), &ev) == -1) {
                 error("epoll_ctl failed: {}", strerror(errno));
                 return false;

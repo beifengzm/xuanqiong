@@ -31,26 +31,28 @@ void RpcServer::start() {
 
         // launch a coroutine
         auto executor = scheduler_->alloc_executor();
-        executor->spawn(&RpcServer::coro_fn, this, connfd, executor);
+        auto socket = std::make_shared<net::Socket>(connfd, executor);
+        executor->spawn(&RpcServer::recv_fn, this, socket);
+        executor->spawn(&RpcServer::send_fn, this, socket);
     }
 }
 
 // coroutine function, one for each channel
-Task RpcServer::coro_fn(int fd, Executor* executor) {
-    net::Socket socket(fd, executor);
+Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
 
     // register read event
-    co_await RegisterReadAwaiter{&socket};
+    co_await RegisterReadAwaiter{socket.get()};
 
     while (true) {
-        co_await socket.async_read();
-        if (socket.closed()) {
-            info("connection closed by peer: {}:{}", socket.peer_addr(), socket.peer_port());
+        co_await socket->async_read();
+        if (socket->closed()) {
+            socket->resume_write();
+            info("connection closed by peer: {}:{}", socket->peer_addr(), socket->peer_port());
             break;
         }
 
         // deserialize message
-        auto input_stream = socket.get_input_stream();
+        auto input_stream = socket->get_input_stream();
         google::protobuf::io::CodedInputStream coded_input_stream(&input_stream);
 
         // deserialize header
@@ -59,7 +61,7 @@ Task RpcServer::coro_fn(int fd, Executor* executor) {
             error("failed to read header len");
             continue;
         }
-        if (socket.read_bytes() < header_len) {
+        if (socket->read_bytes() < header_len) {
             continue;
         }
 
@@ -72,13 +74,23 @@ Task RpcServer::coro_fn(int fd, Executor* executor) {
         coded_input_stream.PopLimit(limit);
         info("header: {}", header.DebugString());
 
+        // check magic number && version
+        if (header.magic() != MAGIC_NUM) {
+            error("invalid magic number: 0x{:08x}", header.magic());
+            continue;
+        }
+        if (header.version() != VERSION) {
+            error("invalid version: {}", header.version());
+            continue;
+        }
+
         // deserialize request
         uint32_t request_len;
         if (!coded_input_stream.ReadVarint32(&request_len)) {
             error("failed to read request len");
             continue;
         }
-        if (socket.read_bytes() < request_len) {
+        if (socket->read_bytes() < request_len) {
             continue;
         }
 
@@ -113,12 +125,12 @@ Task RpcServer::coro_fn(int fd, Executor* executor) {
         service->CallMethod(method, nullptr, request.get(), response.get(), nullptr);
 
         // send response
-        auto output_stream = socket.get_output_stream();
+        auto output_stream = socket->get_output_stream();
         google::protobuf::io::CodedOutputStream coded_output_stream(&output_stream);
         // serialize header
         proto::Header resp_header;
         resp_header.set_magic(MAGIC_NUM);
-        resp_header.set_version(1);
+        resp_header.set_version(VERSION);
         resp_header.set_message_type(proto::MessageType::RESPONSE);
         resp_header.set_request_id(header.request_id());
         coded_output_stream.WriteVarint32(resp_header.ByteSizeLong());
@@ -128,7 +140,14 @@ Task RpcServer::coro_fn(int fd, Executor* executor) {
         coded_output_stream.WriteVarint32(response->ByteSizeLong());
         response->SerializeToCodedStream(&coded_output_stream);
 
-        co_await socket.async_write();
+        socket->resume_write();
+    }
+}
+
+Task RpcServer::send_fn(std::shared_ptr<net::Socket> socket) {
+    while (!socket->closed()) {
+        co_await WaitWriteAwaiter{socket.get()};
+        co_await socket->async_write();
     }
 }
 

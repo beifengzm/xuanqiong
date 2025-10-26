@@ -14,8 +14,8 @@ class Socket;
 
 enum struct EventType : uint8_t {
     READ,
-    DELETE,     // remove fd from scheduler
     WRITE,
+    DELETE,     // remove fd from scheduler
     UNKNOWN,
 };
 

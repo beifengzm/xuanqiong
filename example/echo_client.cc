@@ -11,6 +11,11 @@
 
 using namespace xuanqiong;
 
+void handle_response(EchoResponse* response) {
+    info("response: {}", response->DebugString());
+    delete response;
+}
+
 int main() {
     Scheduler scheduler(SchedPolicy::POLL_POLICY);
     auto executor = scheduler.alloc_executor();
@@ -23,7 +28,8 @@ int main() {
         EchoService_Stub stub(&channel);
         auto response = new EchoResponse;
         RpcController controller;
-        stub.Echo(&controller, &request, response, nullptr);
+        auto done = google::protobuf::NewCallback(handle_response, response);
+        stub.Echo(&controller, &request, response, done);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     std::this_thread::sleep_for(std::chrono::seconds(2));

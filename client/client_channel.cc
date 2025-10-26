@@ -104,13 +104,13 @@ Task ClientChannel::recv_fn() {
             continue;
         }
 
-        auto iter = id2response_.find(header.request_id());
-        if (iter == id2response_.end()) {
-            error("response not found: {}", header.request_id());
+        auto iter = id2session_.find(header.request_id());
+        if (iter == id2session_.end()) {
+            error("session not found: {}", header.request_id());
             continue;
         }
-        auto response = iter->second;
-        id2response_.erase(iter);
+        auto [response, done] = iter->second;
+        id2session_.erase(iter);
 
         limit = coded_input_stream.PushLimit(response_len);
         if (!response->ParseFromCodedStream(&coded_input_stream)) {
@@ -118,9 +118,8 @@ Task ClientChannel::recv_fn() {
             continue;
         }
         coded_input_stream.PopLimit(limit);
-        info("response: {}", response->DebugString());
 
-        delete response;
+        done->Run();
     }
 }
 
@@ -159,7 +158,7 @@ void ClientChannel::CallMethod(
     request->SerializeToCodedStream(&coded_stream);
 
     // store response
-    id2response_[header.request_id()] = response;
+    id2session_[header.request_id()] = {response, done};
 
     socket_->resume_write();
 }

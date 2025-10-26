@@ -31,7 +31,9 @@ public:
 
 private:
     std::unique_ptr<net::Socket> socket_;
-    std::unordered_map<int64_t, google::protobuf::Message*> id2response_;
+    using Session = std::pair<google::protobuf::Message*, google::protobuf::Closure*>;
+    std::unordered_map<int64_t, Session> id2session_;
+
     int64_t request_id_ = 0;
 
     DISALLOW_COPY_AND_ASSIGN(ClientChannel);

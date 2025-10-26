@@ -11,11 +11,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3 -Wall -Wextra \
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})
 
-add_executable(protoc_plugin "util/protoc_plugin.cc")
-target_link_libraries(protoc_plugin
-    protobuf::libprotoc
-    protobuf::libprotobuf
-)
+# add_executable(protoc_plugin "util/protoc_plugin.cc")
+# target_link_libraries(protoc_plugin
+#     protobuf::libprotoc
+#     protobuf::libprotobuf
+# )
 
 function(gen_proto PROTO_DIR OUT_SRCS OUT_HDRS)
     file(GLOB PROTO_FILES "${CMAKE_SOURCE_DIR}/${PROTO_DIR}/*.proto")
@@ -36,11 +36,11 @@ function(gen_proto PROTO_DIR OUT_SRCS OUT_HDRS)
         )
         list(APPEND GENERATED_HDRS
             "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_DIR}/${FILE_NAME}.pb.h"
-            "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_DIR}/${FILE_NAME}.service.h"
+            # "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_DIR}/${FILE_NAME}.service.h"
         )
     endforeach()
 
-    set(PROTOC_PLUGIN_PATH "${CMAKE_CURRENT_BINARY_DIR}/protoc_plugin")
+    # set(PROTOC_PLUGIN_PATH "${CMAKE_CURRENT_BINARY_DIR}/protoc_plugin")
 
     add_custom_command(
         OUTPUT ${GENERATED_SRCS} ${GENERATED_HDRS}
@@ -48,10 +48,10 @@ function(gen_proto PROTO_DIR OUT_SRCS OUT_HDRS)
         ARGS
             --proto_path=${CMAKE_CURRENT_SOURCE_DIR}
             --cpp_out=${CMAKE_CURRENT_BINARY_DIR}
-            --myservice_out=${CMAKE_CURRENT_BINARY_DIR}
-            --plugin=protoc-gen-myservice=${PROTOC_PLUGIN_PATH}
+            # --myservice_out=${CMAKE_CURRENT_BINARY_DIR}
+            # --plugin=protoc-gen-myservice=${PROTOC_PLUGIN_PATH}
             ${PROTO_FILES}
-        DEPENDS ${PROTO_FILES} protoc_plugin
+        DEPENDS ${PROTO_FILES}
         COMMENT "Generating service code from ${PROTO_FILES}"
         VERBATIM
     )
@@ -79,13 +79,26 @@ add_library(rpc_server STATIC ${SERVER_SRCS})
 file(GLOB CLIENT_SRCS "client/*.cc")
 add_library(rpc_client STATIC ${CLIENT_SRCS})
 
-gen_proto(example ECHO_SRCS ECHO_HDRS)
-add_library(echo_proto STATIC ${ECHO_SRCS} ${ECHO_HDRS})
+# file(GLOB ECHO_PROTO_FILES "${CMAKE_SOURCE_DIR}/example/*.proto")
+# protobuf_generate_cpp(
+#     ECHO_PROTO_SRCS ECHO_PROTO_HDRS
+#     LANGUAGE cpp
+#     PROTOS ${ECHO_PROTO_FILES}
+# )
+gen_proto(example ECHO_PROTO_SRCS ECHO_PROTO_HDRS)
+add_library(echo_proto STATIC ${ECHO_PROTO_SRCS} ${ECHO_PROTO_HDRS})
 
+
+# file(GLOB PROTO_FILES "${CMAKE_SOURCE_DIR}/proto/*.proto")
+# protobuf_generate_cpp(
+#     PROTO_SRCS PROTO_HDRS
+#     LANGUAGE cpp
+#     PROTOS ${PROTO_FILES}
+# )
 gen_proto(proto PROTO_SRCS PROTO_HDRS)
 add_library(message_proto STATIC ${PROTO_SRCS} ${PROTO_HDRS})
 
-add_executable(echo_server "example/echo_server.cc")
+add_executable(echo_server "example/echo_server.cc" "example/echo_service.cc")
 target_link_libraries(
     echo_server
     rpc_server

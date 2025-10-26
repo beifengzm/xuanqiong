@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <exception>
+#include <google/protobuf/service.h>
 
 #include "net/accepter.h"
 #include "scheduler/task.h"
@@ -27,6 +28,10 @@ public:
     RpcServer(const RpcServerOptions& options);
     ~RpcServer() = default;
 
+    void register_service(const std::string& service_name, google::protobuf::Service* service) {
+        name2service_[service_name] = service;
+    }
+
     void start();
 
 private:
@@ -34,6 +39,8 @@ private:
 
     net::Accepter accepter_;
     std::unique_ptr<Scheduler> scheduler_;
+
+    std::unordered_map<std::string, google::protobuf::Service*> name2service_;
 
     RpcServer(const RpcServer&) = delete;
     RpcServer& operator=(const RpcServer&) = delete;

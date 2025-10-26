@@ -2,7 +2,7 @@
 
 #include <string>
 #include <memory>
-#include <google/protobuf/message.h>
+#include <google/protobuf/service.h>
 
 #include "net/socket.h"
 #include "scheduler/task.h"
@@ -12,7 +12,7 @@ namespace xuanqiong {
 
 class Executor;
 
-class ClientChannel {
+class ClientChannel : public google::protobuf::RpcChannel {
 public:
     ClientChannel(const std::string& ip, int port, Executor* executor);
 
@@ -20,13 +20,17 @@ public:
 
     Task coro_fn();
 
-    void call_method(const google::protobuf::Message* request,
-                     google::protobuf::Message* response,
-                     const std::string& service_name,
-                     int method_id);
+    void CallMethod(
+        const google::protobuf::MethodDescriptor* method,
+        google::protobuf::RpcController* controller,
+        const google::protobuf::Message* request,
+        google::protobuf::Message* response,
+        google::protobuf::Closure* done
+    ) override;
 
 private:
     std::unique_ptr<net::Socket> socket_;
+    int64_t request_id_ = 0;
 
     DISALLOW_COPY_AND_ASSIGN(ClientChannel);
 };

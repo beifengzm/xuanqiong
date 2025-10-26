@@ -49,21 +49,24 @@ Task ClientChannel::coro_fn() {
     co_await socket_->async_write();
 }
 
-void ClientChannel::call_method(
+void ClientChannel::CallMethod(
+    const google::protobuf::MethodDescriptor* method,
+    google::protobuf::RpcController* controller,
     const google::protobuf::Message* request,
     google::protobuf::Message* response,
-    const std::string& service_name,
-    int method_id
+    google::protobuf::Closure* done
 ) {
     util::NetOutputStream output_stream = socket_->get_output_stream();
     google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
 
     // serialize header
     proto::Header header;
-    header.set_magic(0x12345678);
+    header.set_magic(MAGIC_NUM);
     header.set_version(1);
-    header.set_service_name(service_name);
-    header.set_method_id(method_id);
+    header.set_message_type(proto::MessageType::REQUEST);
+    header.set_request_id(request_id_++);
+    header.set_service_name(method->service()->full_name());
+    header.set_method_name(method->name());
     info("header len: {}", header.ByteSizeLong());
     coded_stream.WriteVarint32(header.ByteSizeLong());
     header.SerializeToCodedStream(&coded_stream);

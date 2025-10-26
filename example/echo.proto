@@ -1,6 +1,8 @@
 // echo.proto
 syntax = "proto3";
 
+option cc_generic_services = true;
+
 message EchoRequest {
   string message = 1;
 }

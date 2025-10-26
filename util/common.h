@@ -10,6 +10,9 @@
 
 #include <iostream>
 #include <format>
+#include <cstdint>
+
+constexpr inline uint64_t MAGIC_NUM = 0x30F8CA9B;
 
 #define info(fmt, ...) std::cout << std::format(fmt, ##__VA_ARGS__) << std::endl;
 #define error(fmt, ...) std::cerr << std::format(fmt, ##__VA_ARGS__) << std::endl;

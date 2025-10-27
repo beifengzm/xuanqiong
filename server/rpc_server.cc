@@ -94,8 +94,8 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
             continue;
         }
 
-        auto service_name = header.service_name();
-        auto method_name = header.method_name();
+        const auto& service_name = header.service_name();
+        const auto& method_name = header.method_name();
 
         auto iter = name2service_.find(service_name);
         if (iter == name2service_.end()) {
@@ -109,10 +109,8 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
             continue;
         }
 
-        std::unique_ptr<google::protobuf::Message> request;
-        std::unique_ptr<google::protobuf::Message> response;
-        request.reset(service->GetRequestPrototype(method).New());
-        response.reset(service->GetResponsePrototype(method).New());
+        std::unique_ptr<google::protobuf::Message> request(service->GetRequestPrototype(method).New());
+        std::unique_ptr<google::protobuf::Message> response(service->GetResponsePrototype(method).New());
 
         limit = coded_input_stream.PushLimit(request_len);
         if (!request->ParseFromCodedStream(&coded_input_stream)) {

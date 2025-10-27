@@ -45,12 +45,13 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
     co_await RegisterReadAwaiter{socket.get()};
 
     while (true) {
-        co_await socket->async_read();
         if (socket->closed()) {
             socket->resume_write();
             info("connection closed by peer: {}:{}", socket->peer_addr(), socket->peer_port());
             break;
         }
+
+        co_await socket->async_read();
 
         // deserialize message
         auto input_stream = socket->get_input_stream();
@@ -58,6 +59,7 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
 
         // deserialize header
         uint32_t header_len;
+        info("read {} bytes", socket->read_bytes());
         if (!coded_input_stream.ReadVarint32(&header_len)) {
             error("failed to read header len");
             continue;

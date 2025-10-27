@@ -15,6 +15,8 @@ bool ReadAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
         // read EOF, connection close, destory coroutine
         auto executor = socket->executor();
         executor->register_event({EventType::DELETE, socket});
+    }
+    if (socket->read_bytes() > 0 ){
         return false;
     }
     return true;

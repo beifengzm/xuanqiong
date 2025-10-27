@@ -31,8 +31,8 @@ int main() {
         RpcController controller;
         auto done = google::protobuf::NewCallback(handle_response, response);
         stub.Echo1(&controller, &request, response, done);
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::seconds(5));
     scheduler.stop();
 }

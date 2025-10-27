@@ -123,3 +123,16 @@ target_link_libraries(
     pthread
     protobuf::libprotobuf
 )
+
+add_executable(rpc_press "press/rpc_press.cc")
+target_link_libraries(
+    rpc_press
+    rpc_client
+    echo_proto
+    message_proto
+    net
+    util
+    sched
+    pthread
+    protobuf::libprotobuf
+)

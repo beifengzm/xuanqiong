@@ -11,12 +11,12 @@ struct EventItem;
 
 class EpollExecutor : public Executor {
 public:
-    EpollExecutor();
+    EpollExecutor(int timeout_ms);
     ~EpollExecutor();
 
     bool register_event(const EventItem& event_item) override;
 
-    void stop();
+    void stop() override;
 
 private:
     // within a single thread, queue does not require lock

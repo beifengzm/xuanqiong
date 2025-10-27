@@ -123,7 +123,6 @@ Task ClientChannel::recv_fn() {
     }
 }
 
-
 Task ClientChannel::send_fn() {
     while (!socket_->closed()) {
         co_await WaitWriteAwaiter{socket_.get()};
@@ -149,7 +148,6 @@ void ClientChannel::CallMethod(
     header.set_request_id(request_id_++);
     header.set_service_name(method->service()->full_name());
     header.set_method_name(method->name());
-    info("header len: {}", header.ByteSizeLong());
     coded_stream.WriteVarint32(header.ByteSizeLong());
     header.SerializeToCodedStream(&coded_stream);
 

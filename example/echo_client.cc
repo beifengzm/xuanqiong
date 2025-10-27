@@ -17,12 +17,13 @@ void handle_response(EchoResponse* response) {
 }
 
 int main() {
-    Scheduler scheduler(SchedPolicy::POLL_POLICY);
+    SchedulerOptions sched_options(1000, SchedPolicy::POLL_POLICY);
+    Scheduler scheduler(sched_options);
     auto executor = scheduler.alloc_executor();
     ClientChannel channel("127.0.0.1", 8888, executor);
 
     std::string data("echo request");
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 5; ++i) {
         EchoRequest request;
         request.set_message(data.data() + std::to_string(i));
         EchoService_Stub stub(&channel);
@@ -33,4 +34,5 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     std::this_thread::sleep_for(std::chrono::seconds(2));
+    scheduler.stop();
 }

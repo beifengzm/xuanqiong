@@ -9,12 +9,12 @@ namespace xuanqiong {
 
 class KqueueExecutor : public Executor {
 public:
-    KqueueExecutor();
+    KqueueExecutor(int timeout_ms);
     ~KqueueExecutor();
 
     bool register_event(const EventItem& event_item) override;
 
-    void stop();
+    void stop() override;
 
 private:
     std::unique_ptr<std::thread> thread_;

@@ -32,6 +32,8 @@ public:
 
     virtual bool register_event(const EventItem& item) = 0;
 
+    virtual void stop() = 0;
+
     template<typename Func, typename... Args>
     void spawn(Func&& func, Args&&... args) {
         std::invoke(std::forward<Func>(func), std::forward<Args>(args)...);
@@ -43,11 +45,22 @@ enum class SchedPolicy : uint8_t {
     URING_POLICY,
 };
 
+struct SchedulerOptions {
+    int poll_timeout;
+    SchedPolicy policy;
+    SchedulerOptions(int poll_timeout = -1, SchedPolicy policy = SchedPolicy::POLL_POLICY)
+        : poll_timeout(poll_timeout), policy(policy) {}
+};
+
 // coroutine scheduler
 class Scheduler {
 public:
-    Scheduler(SchedPolicy policy);
+    Scheduler(const SchedulerOptions& options);
     ~Scheduler() = default;
+
+    void stop() {
+        executor_->stop();
+    }
 
     Executor* alloc_executor() { return executor_.get(); }
 

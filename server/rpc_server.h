@@ -19,13 +19,15 @@ struct RpcServerOptions {
     int port;
     int backlog;
     int nodelay;
+    int poll_timeout;
     SchedPolicy sched_policy;
 
     RpcServerOptions(int port,
                      int backlog = 256,
                      bool nodelay = 1,
+                     int poll_timeout = -1,
                      SchedPolicy policy = SchedPolicy::POLL_POLICY)
-        : port(port), backlog(backlog), nodelay(nodelay), sched_policy(policy) {}
+        : port(port), backlog(backlog), nodelay(nodelay), poll_timeout(poll_timeout), sched_policy(policy) {}
 };
 
 class RpcServer {

@@ -16,17 +16,19 @@ namespace xuanqiong {
 
 static constexpr int MAX_EVENTS = 1024;
 
-KqueueExecutor::KqueueExecutor() {
+KqueueExecutor::KqueueExecutor(int timeout_ms): stop_(false) {
     kq_fd_ = kqueue();
     if (kq_fd_ == -1) {
         error("kqueue() failed: %s", strerror(errno));
         return;
     }
 
-    thread_ = std::make_unique<std::thread>([this]() {
+    thread_ = std::make_unique<std::thread>([this, timeout_ms]() {
         std::vector<struct kevent> events(MAX_EVENTS);
         while (!stop_) {
-            int nready = kevent(kq_fd_, nullptr, 0, events.data(), MAX_EVENTS, nullptr);
+            struct timespec timeout = {timeout_ms / 1000, (timeout_ms % 1000) * 1000000};
+            auto ptr = timeout_ms == -1 ? nullptr : &timeout;
+            int nready = kevent(kq_fd_, nullptr, 0, events.data(), MAX_EVENTS, ptr);
             if (nready == -1) {
                 if (errno == EINTR) continue; // 可选：处理信号中断
                 error("kevent wait failed: %s", strerror(errno));

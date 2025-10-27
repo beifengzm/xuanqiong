@@ -12,7 +12,7 @@
 
 namespace xuanqiong {
 
-EpollExecutor::EpollExecutor() {
+EpollExecutor::EpollExecutor(int timeout_ms) {
     epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
     if (epoll_fd_ == -1) {
         error("epoll_create1 failed: %s", strerror(errno));
@@ -20,7 +20,7 @@ EpollExecutor::EpollExecutor() {
     thread_ = std::make_unique<std::thread>([this]() {
         while (!stop_) {
             struct epoll_event events[MAX_EVENTS];
-            int nready = epoll_wait(epoll_fd_, events, MAX_EVENTS, -1);
+            int nready = epoll_wait(epoll_fd_, events, MAX_EVENTS, timeout_ms);
             if (nready == -1) {
                 error("epoll_wait failed: %s", strerror(errno));
                 continue;

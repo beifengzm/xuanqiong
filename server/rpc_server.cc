@@ -15,7 +15,8 @@ namespace xuanqiong {
 
 RpcServer::RpcServer(const RpcServerOptions& options)
     : accepter_(options.port, options.backlog, options.nodelay) {
-    scheduler_ = std::make_unique<Scheduler>(options.sched_policy);
+    auto sched_options = SchedulerOptions(options.poll_timeout, options.sched_policy);
+    scheduler_ = std::make_unique<Scheduler>(sched_options);
 }
 
 void RpcServer::start() {

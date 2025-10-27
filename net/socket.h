@@ -39,7 +39,7 @@ public:
     }
 
     void close() {
-        shutdown(sockfd_, SHUT_RDWR);
+        shutdown(sockfd_, SHUT_WR);
         closed_ = true;
     }
 

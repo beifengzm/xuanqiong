@@ -20,7 +20,7 @@ public:
 
     void NotifyOnCancel(google::protobuf::Closure* callback) override;
 
-    void SetFailed(const std::string& reason);
+    void SetFailed(const std::string& reason) override;
     void SetTimeout(int64_t ms);
     int64_t timeout_ms() const { return timeout_ms_; }
 

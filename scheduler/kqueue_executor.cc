@@ -28,16 +28,39 @@ KqueueExecutor::KqueueExecutor() {
         while (!stop_) {
             int nready = kevent(kq_fd_, nullptr, 0, events.data(), MAX_EVENTS, nullptr);
             if (nready == -1) {
+                if (errno == EINTR) continue; // 可选：处理信号中断
                 error("kevent wait failed: %s", strerror(errno));
                 continue;
             }
             info("kevent wait {} events", nready);
             for (int i = 0; i < nready; ++i) {
-                auto socket = static_cast<net::Socket*>(events[i].udata);
+                auto& ev = events[i];
+                auto socket = static_cast<net::Socket*>(ev.udata);
                 if (socket == nullptr) {
+                    error("socket is null");
                     continue;
                 }
-                socket->resume();
+
+                if (ev.flags & EV_EOF) {
+                    info("socket fd=%d closed (EV_EOF)", socket->fd());
+                    socket->close();
+                    // 删除该 fd 的所有事件（READ 和 WRITE）
+                    struct kevent del_ev[2];
+                    EV_SET(&del_ev[0], ev.ident, EVFILT_READ,  EV_DELETE, 0, 0, nullptr);
+                    EV_SET(&del_ev[1], ev.ident, EVFILT_WRITE, EV_DELETE, 0, 0, nullptr);
+                    kevent(kq_fd_, del_ev, 2, nullptr, 0, nullptr);
+                    continue;
+                }
+                if (ev.filter == EVFILT_WRITE) {
+                    struct kevent mod_ev;
+                    EV_SET(&mod_ev, ev.ident, EVFILT_WRITE, EV_DELETE, 0, 0, nullptr);
+                    if (kevent(kq_fd_, &mod_ev, 1, nullptr, 0, nullptr) == -1) {
+                        error("failed to delete EVFILT_WRITE for fd=%d: %s", (int)ev.ident, strerror(errno));
+                    }
+                    socket->resume_write();
+                } else if (ev.filter == EVFILT_READ) {
+                    socket->resume_read();
+                }
             }
         }
     });
@@ -51,7 +74,6 @@ KqueueExecutor::~KqueueExecutor() {
     if (thread_ && thread_->joinable()) {
         thread_->join();
     }
-
     if (kq_fd_ != -1) {
         ::close(kq_fd_);
         kq_fd_ = -1;
@@ -59,62 +81,47 @@ KqueueExecutor::~KqueueExecutor() {
 }
 
 bool KqueueExecutor::register_event(const EventItem& event_item) {
-    struct kevent change = {};
+    int fd = event_item.socket->fd();
+    void* udata = static_cast<void*>(event_item.socket);
 
     switch (event_item.type) {
         case EventType::READ: {
-            EV_SET(&change,
-                   static_cast<uintptr_t>(event_item.socket->fd()),
-                   EVFILT_READ,
-                   EV_ADD | EV_CLEAR,
-                   0, 0,
-                   static_cast<void*>(event_item.socket));
+            // 添加可读事件（边缘触发）
+            struct kevent ev;
+            EV_SET(&ev, static_cast<uintptr_t>(fd), EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, udata);
+            if (kevent(kq_fd_, &ev, 1, nullptr, 0, nullptr) == -1) {
+                error("kqueue add READ failed for fd=%d: %s", fd, strerror(errno));
+                return false;
+            }
             break;
         }
         case EventType::WRITE: {
-            EV_SET(&change,
-                   static_cast<uintptr_t>(event_item.socket->fd()),
-                   EVFILT_WRITE,
-                   EV_ADD | EV_CLEAR,
-                   0, 0,
-                   static_cast<void*>(event_item.socket));
+            // 添加可写事件（边缘触发）
+            // 注意：这里不删除 READ，因为通常读写是共存的，但写事件触发后我们会主动删 WRITE
+            struct kevent ev;
+            EV_SET(&ev, static_cast<uintptr_t>(fd), EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, udata);
+            if (kevent(kq_fd_, &ev, 1, nullptr, 0, nullptr) == -1) {
+                error("kqueue add WRITE failed for fd=%d: %s", fd, strerror(errno));
+                return false;
+            }
             break;
         }
         case EventType::DELETE: {
-            info("delete event for fd=%d", event_item.socket->fd());
-            EV_SET(&change,
-                   static_cast<uintptr_t>(event_item.socket->fd()),
-                   EVFILT_READ,
-                   EV_DELETE,
-                   0, 0,
-                   nullptr);
-            kevent(kq_fd_, &change, 1, nullptr, 0, nullptr); // ignore errors
-
-            EV_SET(&change,
-                   static_cast<uintptr_t>(event_item.socket->fd()),
-                   EVFILT_WRITE,
-                   EV_DELETE,
-                   0, 0,
-                   nullptr);
-            kevent(kq_fd_, &change, 1, nullptr, 0, nullptr); // ignore errors
-
-            return true;
+            info("delete event for fd=%d", fd);
+            struct kevent del_ev[2];
+            EV_SET(&del_ev[0], static_cast<uintptr_t>(fd), EVFILT_READ,  EV_DELETE, 0, 0, nullptr);
+            EV_SET(&del_ev[1], static_cast<uintptr_t>(fd), EVFILT_WRITE, EV_DELETE, 0, 0, nullptr);
+            // 忽略返回值，即使失败也不影响（fd 可能已关闭）
+            kevent(kq_fd_, del_ev, 2, nullptr, 0, nullptr);
+            break;
         }
         case EventType::UNKNOWN:
             error("EventType::UNKNOWN is invalid");
             return false;
-
         default:
             error("Unsupported event type: %d", static_cast<int>(event_item.type));
             return false;
     }
-
-    if (kevent(kq_fd_, &change, 1, nullptr, 0, nullptr) == -1) {
-        error("kevent register failed for fd=%d, type=%d: %s",
-              event_item.socket->fd(), static_cast<int>(event_item.type), strerror(errno));
-        return false;
-    }
-
     return true;
 }
 

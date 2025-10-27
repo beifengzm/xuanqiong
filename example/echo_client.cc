@@ -29,8 +29,8 @@ int main() {
         auto response = new EchoResponse;
         RpcController controller;
         auto done = google::protobuf::NewCallback(handle_response, response);
-        stub.Echo(&controller, &request, response, done);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        stub.Echo1(&controller, &request, response, done);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     std::this_thread::sleep_for(std::chrono::seconds(2));
 }

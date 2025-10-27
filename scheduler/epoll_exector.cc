@@ -27,14 +27,16 @@ EpollExecutor::EpollExecutor() {
             }
             error("epoll_wait nready: {}", nready);
             for (int i = 0; i < nready; i++) {
-                auto socket =
-                    reinterpret_cast<net::Socket*>(events[i].data.ptr);
+                auto socket = reinterpret_cast<net::Socket*>(events[i].data.ptr);
+                if (!socket) {
+                    error("socket is null");
+                    continue;
+                }
                 if (events[i].events & (EPOLLHUP | EPOLLRDHUP)) {
                     // handle error event
                     socket->close();
                     if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket->fd(), nullptr) == -1) {
                         error("epoll_ctl failed: {}", strerror(errno));
-                        continue;
                     }
                     continue;
                 }

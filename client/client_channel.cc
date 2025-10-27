@@ -54,14 +54,13 @@ Task ClientChannel::recv_fn() {
     co_await RegisterReadAwaiter{socket_.get()};
 
     while (true) {
-        info("[1] recv_fn: {} bytes", socket_->read_bytes());
-        co_await socket_->async_read();
-        info("[2] recv_fn: {} bytes", socket_->read_bytes());
         if (socket_->closed()) {
             socket_->resume_write();
             info("connection closed by peer: {}:{}", socket_->peer_addr(), socket_->peer_port());
             break;
         }
+
+        co_await socket_->async_read();
 
         // deserialize message
         auto input_stream = socket_->get_input_stream();
@@ -150,24 +149,15 @@ void ClientChannel::CallMethod(
     header.set_request_id(request_id_++);
     header.set_service_name(method->service()->full_name());
     header.set_method_name(method->name());
-    info("-----------------");
-    info("socket size: {}", socket_->write_bytes());
     coded_stream.WriteVarint32(header.ByteSizeLong());
     header.SerializeToCodedStream(&coded_stream);
     
-    info("header size: {}", header.ByteSizeLong());
-    info("socket size: {}", socket_->write_bytes());
-
     // serialize request
     coded_stream.WriteVarint32(request->ByteSizeLong());
     request->SerializeToCodedStream(&coded_stream);
-    info("request size: {}", request->ByteSizeLong());
-    info("socket size: {}", socket_->write_bytes());
 
     // store response
     id2session_[header.request_id()] = {response, done};
-
-    info("send, request_id: {}, header_size: {}, request_size: {}", header.request_id(), header.ByteSizeLong(), request->ByteSizeLong());
 
     socket_->resume_write();
 }

@@ -38,7 +38,6 @@ Socket::~Socket() {
 ReadAwaiter Socket::async_read() {
     while (true) {
         int n = read_buf_.read_from(sockfd_);
-        info("[async_read] read {} bytes", n);
         if (n > 0) {
             continue;
         } else if (n == 0) {
@@ -47,7 +46,6 @@ ReadAwaiter Socket::async_read() {
         } else {
             // retry
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                info("again, read data, errno: {}", errno);
                 return {this};
             }
             if (errno == EINTR) {

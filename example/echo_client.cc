@@ -23,7 +23,7 @@ int main() {
     ClientChannel channel("127.0.0.1", 8888, executor);
 
     std::string data("echo request");
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 1000; ++i) {
         EchoRequest request;
         request.set_message(data.data() + std::to_string(i));
         EchoService_Stub stub(&channel);
@@ -31,7 +31,7 @@ int main() {
         RpcController controller;
         auto done = google::protobuf::NewCallback(handle_response, response);
         stub.Echo1(&controller, &request, response, done);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     std::this_thread::sleep_for(std::chrono::seconds(5));
     scheduler.stop();

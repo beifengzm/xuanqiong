@@ -74,8 +74,8 @@ int OutputBuffer::write_to(int fd) {
         return nwrite;
     }
 
-    info("[write] nwrite: {}, total_bytes: {}, to_write_bytes: {}",
-        nwrite, total_bytes_, to_write_bytes_);
+    // info("[write] nwrite: {}, total_bytes: {}, to_write_bytes: {}",
+    //     nwrite, total_bytes_, to_write_bytes_);
 
     int left = nwrite;
     to_write_bytes_ -= nwrite;

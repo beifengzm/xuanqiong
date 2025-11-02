@@ -43,6 +43,10 @@ public:
     NetOutputStream(OutputBuffer* output_buffer) : output_buffer_(output_buffer) {}
     ~NetOutputStream() = default;
 
+    void append(const void* data, int size) {
+        output_buffer_->append(data, size);
+    }
+
     bool Next(void** data, int* size) override {
         return output_buffer_->next(data, size);
     }

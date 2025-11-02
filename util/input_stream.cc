@@ -33,12 +33,34 @@ int InputBuffer::read_from(int fd) {
     return nread;
 }
 
+bool InputBuffer::fetch_uint32(uint32_t* value) {
+    if (sizeof(uint32_t) > read_bytes_) {
+        return false;
+    }
+    size_t copy_len = std::min(cur_block_->end - cur_block_->begin, (int)sizeof(uint32_t));
+    memcpy(value, cur_block_->data + cur_block_->begin, copy_len);
+    cur_block_->begin += copy_len;
+    if (copy_len < sizeof(uint32_t)) {
+        cur_block_ = cur_block_->next;
+        memcpy(value + copy_len,
+            cur_block_->data + cur_block_->begin, sizeof(uint32_t) - copy_len);
+        cur_block_->begin += sizeof(uint32_t) - copy_len;
+    }
+    if (cur_block_->begin == kBlockSize && cur_block_->next) {
+        cur_block_ = cur_block_->next;
+    }
+    consumed_bytes_ += sizeof(int32_t);
+    read_bytes_ -= sizeof(int32_t);
+    return true;
+}
+
 bool InputBuffer::next(const void** data, int* size) {
-    if (cur_block_->begin == cur_block_->end) {
+    if (cur_block_->begin == cur_block_->end || limit_ == 0) {
         return false;
     }
     *data = cur_block_->data + cur_block_->begin;
-    *size = cur_block_->end - cur_block_->begin;
+    *size = std::min(cur_block_->end - cur_block_->begin, limit_);
+    limit_ -= limit_ == INT32_MAX ? 0 : *size;
     cur_block_->begin += *size;
     consumed_bytes_ += *size;
     if (cur_block_->begin == kBlockSize && cur_block_->next) {
@@ -52,6 +74,7 @@ void InputBuffer::back_up(int n) {
     int backup_bytes = std::min(n, cur_block_->begin);
     cur_block_->begin -= backup_bytes;
     read_bytes_ += backup_bytes;
+    limit_ += limit_ == INT32_MAX ? 0 : backup_bytes;
     consumed_bytes_ -= backup_bytes;
 
     // dealloc consumed blocks

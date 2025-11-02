@@ -55,27 +55,27 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
 
         // deserialize message
         auto input_stream = socket->get_input_stream();
-        google::protobuf::io::CodedInputStream coded_input_stream(&input_stream);
 
         // deserialize header
         uint32_t header_len;
-        info("read {} bytes", socket->read_bytes());
-        if (!coded_input_stream.ReadVarint32(&header_len)) {
+        if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
             continue;
         }
-        if (socket->read_bytes() < header_len) {
-            continue;
+        // info("read {} bytes, header_len: {}", socket->read_bytes(), header_len);
+        while (socket->read_bytes() < header_len) {
+            info("read {} bytes, but header_len is {}", socket->read_bytes(), header_len);
+            co_await socket->async_read();
         }
 
-        auto limit = coded_input_stream.PushLimit(header_len);
         proto::Header header;
-        if (!header.ParseFromCodedStream(&coded_input_stream)) {
+        input_stream.push_limit(header_len);
+        if (!header.ParseFromZeroCopyStream(&input_stream)) {
             error("failed to parse header");
             continue;
         }
-        coded_input_stream.PopLimit(limit);
-        info("header: {}", header.DebugString());
+        input_stream.pop_limit();
+        // info("header: {}", header.DebugString());
 
         // check magic number && version
         if (header.magic() != MAGIC_NUM) {
@@ -89,13 +89,16 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
 
         // deserialize request
         uint32_t request_len;
-        if (!coded_input_stream.ReadVarint32(&request_len)) {
+        if (!input_stream.fetch_uint32(&request_len)) {
             error("failed to read request len");
             continue;
         }
-        if (socket->read_bytes() < request_len) {
-            continue;
+        while (socket->read_bytes() < request_len) {
+            co_await socket->async_read();
+            info("read {} bytes, but request_len is {}", socket->read_bytes(), request_len);
         }
+
+        // info("read {} bytes, request_len: {}", socket->read_bytes(), request_len);
 
         const auto& service_name = header.service_name();
         const auto& method_name = header.method_name();
@@ -115,31 +118,33 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
         std::unique_ptr<google::protobuf::Message> request(service->GetRequestPrototype(method).New());
         std::unique_ptr<google::protobuf::Message> response(service->GetResponsePrototype(method).New());
 
-        limit = coded_input_stream.PushLimit(request_len);
-        if (!request->ParseFromCodedStream(&coded_input_stream)) {
+        input_stream.push_limit(request_len);
+        if (!request->ParseFromZeroCopyStream(&input_stream)) {
             error("failed to parse request");
             continue;
         }
-        coded_input_stream.PopLimit(limit);
+        input_stream.pop_limit();
+        // info("request: {}", request->DebugString());
 
         // call method
         service->CallMethod(method, nullptr, request.get(), response.get(), nullptr);
 
         // send response
         auto output_stream = socket->get_output_stream();
-        google::protobuf::io::CodedOutputStream coded_output_stream(&output_stream);
         // serialize header
         proto::Header resp_header;
         resp_header.set_magic(MAGIC_NUM);
         resp_header.set_version(VERSION);
         resp_header.set_message_type(proto::MessageType::RESPONSE);
         resp_header.set_request_id(header.request_id());
-        coded_output_stream.WriteVarint32(resp_header.ByteSizeLong());
-        resp_header.SerializeToCodedStream(&coded_output_stream);
+        uint32_t resp_header_len = resp_header.ByteSizeLong();
+        output_stream.append(&resp_header_len, sizeof(resp_header_len));
+        resp_header.SerializeToZeroCopyStream(&output_stream);
 
         // serialize response
-        coded_output_stream.WriteVarint32(response->ByteSizeLong());
-        response->SerializeToCodedStream(&coded_output_stream);
+        uint32_t response_len = response->ByteSizeLong();
+        output_stream.append(&response_len, sizeof(response_len));
+        response->SerializeToZeroCopyStream(&output_stream);
 
         socket->resume_write();
     }

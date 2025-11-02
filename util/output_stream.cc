@@ -30,8 +30,6 @@ bool OutputBuffer::next(void** data, int* size) {
     to_write_bytes_ += *size;
     total_bytes_ += *size;
     last_block_->end += *size;
-    // info("[next] size: {}, total_bytes: {}, to_write_bytes: {}, last_block_end: {}",
-    //     *size, total_bytes_, to_write_bytes_, last_block_->end);
     return true;
 }
 
@@ -40,8 +38,6 @@ void OutputBuffer::back_up(int count) {
     to_write_bytes_ -= to_backup;
     total_bytes_ -= to_backup;
     last_block_->end -= to_backup;
-    // info("[back_up] count: {}, to_backup: {}, total_bytes: {}, to_write_bytes: {}, last_block_end: {}",
-    //     count, to_backup, total_bytes_, to_write_bytes_, last_block_->end);
 }
 
 void OutputBuffer::append(const void* data, int size) {
@@ -74,9 +70,6 @@ int OutputBuffer::write_to(int fd) {
         return nwrite;
     }
 
-    // info("[write] nwrite: {}, total_bytes: {}, to_write_bytes: {}",
-    //     nwrite, total_bytes_, to_write_bytes_);
-
     int left = nwrite;
     to_write_bytes_ -= nwrite;
     while (left > 0) {
@@ -91,7 +84,6 @@ int OutputBuffer::write_to(int fd) {
             auto next_block = cur_block_->next;
             delete cur_block_;
             cur_block_ = next_block;
-            // info("[write] delete block");
         }
     }
 

@@ -64,25 +64,25 @@ Task ClientChannel::recv_fn() {
 
         // deserialize message
         auto input_stream = socket_->get_input_stream();
-        google::protobuf::io::CodedInputStream coded_input_stream(&input_stream);
 
         // deserialize header
         uint32_t header_len;
-        if (!coded_input_stream.ReadVarint32(&header_len)) {
+        if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
             continue;
         }
-        if (socket_->read_bytes() < header_len) {
-            continue;
+        while (socket_->read_bytes() < header_len) {
+            co_await socket_->async_read();
+            info("read {} bytes, but header_len is {}", socket_->read_bytes(), header_len);
         }
 
-        auto limit = coded_input_stream.PushLimit(header_len);
+        input_stream.push_limit(header_len);
         proto::Header header;
-        if (!header.ParseFromCodedStream(&coded_input_stream)) {
+        if (!header.ParseFromZeroCopyStream(&input_stream)) {
             error("failed to parse header");
             continue;
         }
-        coded_input_stream.PopLimit(limit);
+        input_stream.pop_limit();
         info("header: {}", header.DebugString());
 
         // check magic number && version
@@ -97,12 +97,13 @@ Task ClientChannel::recv_fn() {
 
         // deserialize request
         uint32_t response_len;
-        if (!coded_input_stream.ReadVarint32(&response_len)) {
+        if (!input_stream.fetch_uint32(&response_len)) {
             error("failed to read response len");
             continue;
         }
-        if (socket_->read_bytes() < response_len) {
-            continue;
+        while (socket_->read_bytes() < response_len) {
+            co_await socket_->async_read();
+            info("read {} bytes, but response_len is {}", socket_->read_bytes(), response_len);
         }
 
         auto iter = id2session_.find(header.request_id());
@@ -113,12 +114,12 @@ Task ClientChannel::recv_fn() {
         auto [response, done] = iter->second;
         id2session_.erase(iter);
 
-        limit = coded_input_stream.PushLimit(response_len);
-        if (!response->ParseFromCodedStream(&coded_input_stream)) {
+        input_stream.push_limit(response_len);
+        if (!response->ParseFromZeroCopyStream(&input_stream)) {
             error("failed to parse response");
             continue;
         }
-        coded_input_stream.PopLimit(limit);
+        input_stream.pop_limit();
 
         done->Run();
     }
@@ -139,7 +140,6 @@ void ClientChannel::CallMethod(
     google::protobuf::Closure* done
 ) {
     util::NetOutputStream output_stream = socket_->get_output_stream();
-    google::protobuf::io::CodedOutputStream coded_stream(&output_stream);
 
     // serialize header
     proto::Header header;
@@ -149,12 +149,15 @@ void ClientChannel::CallMethod(
     header.set_request_id(request_id_++);
     header.set_service_name(method->service()->full_name());
     header.set_method_name(method->name());
-    coded_stream.WriteVarint32(header.ByteSizeLong());
-    header.SerializeToCodedStream(&coded_stream);
-    
+
+    uint32_t header_len = header.ByteSizeLong();
+    output_stream.append(&header_len, sizeof(header_len));
+    header.SerializeToZeroCopyStream(&output_stream);
+
     // serialize request
-    coded_stream.WriteVarint32(request->ByteSizeLong());
-    request->SerializeToCodedStream(&coded_stream);
+    uint32_t request_len = request->ByteSizeLong();
+    output_stream.append(&request_len, sizeof(request_len));
+    request->SerializeToZeroCopyStream(&output_stream);
 
     // store response
     id2session_[header.request_id()] = {response, done};

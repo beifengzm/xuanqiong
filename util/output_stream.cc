@@ -62,6 +62,7 @@ int OutputBuffer::write_to(int fd) {
         void* data = block->data + block->begin;
         size_t size = size_t(block->end - block->begin);
         iovs.emplace_back(data, size);
+        // info("[write_to] iovs[{}] = {{ {}, {} }}", iovs.size() - 1, data, size);
     }
 
     // use writev to reduce syscall

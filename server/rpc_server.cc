@@ -33,8 +33,8 @@ void RpcServer::start() {
         // launch a coroutine
         auto executor = scheduler_->alloc_executor();
         auto socket = std::make_shared<net::Socket>(connfd, executor);
-        executor->spawn(&RpcServer::recv_fn, this, socket);
         executor->spawn(&RpcServer::send_fn, this, socket);
+        executor->spawn(&RpcServer::recv_fn, this, socket);
     }
 }
 
@@ -58,6 +58,10 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
 
         // deserialize header
         uint32_t header_len;
+        while (socket->read_bytes() < sizeof(header_len)) {
+            info("read {} bytes, but header_len is {}", socket->read_bytes(), sizeof(header_len));
+            co_await socket->async_read();
+        }
         if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
             continue;

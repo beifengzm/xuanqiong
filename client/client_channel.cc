@@ -41,8 +41,8 @@ ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor
     net::SocketUtils::setsocketopt(sockfd, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger));
 
     // start recv and send coroutine
-    executor->spawn(&ClientChannel::recv_fn, this);
     executor->spawn(&ClientChannel::send_fn, this);
+    executor->spawn(&ClientChannel::recv_fn, this);
 }
 
 void ClientChannel::close() {
@@ -67,6 +67,10 @@ Task ClientChannel::recv_fn() {
 
         // deserialize header
         uint32_t header_len;
+        while (socket_->read_bytes() < sizeof(header_len)) {
+            info("read {} bytes, but read header_len is {}", socket_->read_bytes(), sizeof(header_len));
+            co_await socket_->async_read();
+        }
         if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
             continue;
@@ -107,20 +111,19 @@ Task ClientChannel::recv_fn() {
         }
 
         auto request_id = header.request_id();
-        info("[111]id2session_.find(request_id) == id2session_.end()? {}", id2session_.find(request_id) == id2session_.end());
-        auto iter = id2session_.find(request_id);
-        info("[222]id2session_.find(request_id) == id2session_.end()? {}", id2session_.find(request_id) == id2session_.end());
-        if (iter == id2session_.end()) {
-            info("[333]id2session_.find(request_id) == id2session_.end()? {}", id2session_.find(request_id) == id2session_.end());
-            error("session not found: {}", request_id);
-            for (auto& [id, session] : id2session_) {
-                info("id: {}", id);
+        google::protobuf::Message* response = nullptr;
+        google::protobuf::Closure* done = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(map_mutex_);
+
+            auto iter = id2session_.find(request_id);
+            if (iter == id2session_.end()) {
+                error("session not found: {}", request_id);
+                continue;
             }
-            exit(1);
-            continue;
+            std::tie(response, done) = iter->second;
+            id2session_.erase(iter);
         }
-        auto [response, done] = iter->second;
-        id2session_.erase(iter);
 
         input_stream.push_limit(response_len);
         if (!response->ParseFromZeroCopyStream(&input_stream)) {
@@ -168,7 +171,10 @@ void ClientChannel::CallMethod(
     request->SerializeToZeroCopyStream(&output_stream);
 
     // store response
-    id2session_[header.request_id()] = {response, done};
+    {
+        std::lock_guard<std::mutex> lock(map_mutex_);
+        id2session_[header.request_id()] = {response, done};
+    }
 
     socket_->resume_write();
 }

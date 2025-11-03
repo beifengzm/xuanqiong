@@ -33,6 +33,7 @@ private:
     std::unique_ptr<net::Socket> socket_;
     using Session = std::pair<google::protobuf::Message*, google::protobuf::Closure*>;
     std::unordered_map<int64_t, Session> id2session_;
+    std::mutex map_mutex_;
 
     int64_t request_id_ = 0;
 

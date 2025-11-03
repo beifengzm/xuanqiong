@@ -62,7 +62,7 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
             error("failed to read header len");
             continue;
         }
-        // info("read {} bytes, header_len: {}", socket->read_bytes(), header_len);
+        info("read {} bytes, header_len: {}", socket->read_bytes(), header_len);
         while (socket->read_bytes() < header_len) {
             info("read {} bytes, but header_len is {}", socket->read_bytes(), header_len);
             co_await socket->async_read();
@@ -72,6 +72,7 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
         input_stream.push_limit(header_len);
         if (!header.ParseFromZeroCopyStream(&input_stream)) {
             error("failed to parse header");
+            exit(1);
             continue;
         }
         input_stream.pop_limit();

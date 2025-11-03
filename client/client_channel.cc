@@ -106,9 +106,17 @@ Task ClientChannel::recv_fn() {
             info("read {} bytes, but response_len is {}", socket_->read_bytes(), response_len);
         }
 
-        auto iter = id2session_.find(header.request_id());
+        auto request_id = header.request_id();
+        info("[111]id2session_.find(request_id) == id2session_.end()? {}", id2session_.find(request_id) == id2session_.end());
+        auto iter = id2session_.find(request_id);
+        info("[222]id2session_.find(request_id) == id2session_.end()? {}", id2session_.find(request_id) == id2session_.end());
         if (iter == id2session_.end()) {
-            error("session not found: {}", header.request_id());
+            info("[333]id2session_.find(request_id) == id2session_.end()? {}", id2session_.find(request_id) == id2session_.end());
+            error("session not found: {}", request_id);
+            for (auto& [id, session] : id2session_) {
+                info("id: {}", id);
+            }
+            exit(1);
             continue;
         }
         auto [response, done] = iter->second;

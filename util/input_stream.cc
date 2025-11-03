@@ -39,6 +39,7 @@ bool InputBuffer::fetch_uint32(uint32_t* value) {
     }
     size_t copy_len = std::min(cur_block_->end - cur_block_->begin, (int)sizeof(uint32_t));
     memcpy(value, cur_block_->data + cur_block_->begin, copy_len);
+    // info("begin: {}, end: {}, copy_len: {}", cur_block_->begin, cur_block_->end, copy_len);
     cur_block_->begin += copy_len;
     if (copy_len < sizeof(uint32_t)) {
         cur_block_ = cur_block_->next;
@@ -51,6 +52,10 @@ bool InputBuffer::fetch_uint32(uint32_t* value) {
     }
     consumed_bytes_ += sizeof(int32_t);
     read_bytes_ -= sizeof(int32_t);
+    if (*value > 1000) {
+        error("invalid uint32_t value: {}", *value);
+        exit(1);
+    }
     return true;
 }
 

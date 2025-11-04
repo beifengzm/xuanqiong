@@ -1,4 +1,3 @@
-
 #include <string.h>
 #include <fcntl.h>
 #include <google/protobuf/io/coded_stream.h>
@@ -51,17 +50,16 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
             break;
         }
 
-        co_await socket->async_read();
+        while (socket->read_bytes() < sizeof(uint32_t)) {
+            co_await socket->async_read();
+        }
 
         // deserialize message
         auto input_stream = socket->get_input_stream();
 
         // deserialize header
         uint32_t header_len;
-        while (socket->read_bytes() < sizeof(header_len)) {
-            info("read {} bytes, but header_len is {}", socket->read_bytes(), sizeof(header_len));
-            co_await socket->async_read();
-        }
+        info("read {} bytes, read header sizeof(uint32_t) is 4", socket->read_bytes());
         if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
             continue;

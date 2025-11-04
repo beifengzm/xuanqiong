@@ -60,26 +60,25 @@ Task ClientChannel::recv_fn() {
             break;
         }
 
-        co_await socket_->async_read();
+        while (socket_->read_bytes() < sizeof(uint32_t)) {
+            co_await socket_->async_read();
+        }
 
         // deserialize message
         auto input_stream = socket_->get_input_stream();
 
         // deserialize header
         uint32_t header_len;
-        while (socket_->read_bytes() < sizeof(header_len)) {
-            info("read {} bytes, but read header_len is {}", socket_->read_bytes(), sizeof(header_len));
-            co_await socket_->async_read();
-        }
+        info("read {} bytes, sizeof(header_len) is 4", socket_->read_bytes());
         if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
             continue;
         }
+
         while (socket_->read_bytes() < header_len) {
             co_await socket_->async_read();
             info("read {} bytes, but header_len is {}", socket_->read_bytes(), header_len);
         }
-
         input_stream.push_limit(header_len);
         proto::Header header;
         if (!header.ParseFromZeroCopyStream(&input_stream)) {

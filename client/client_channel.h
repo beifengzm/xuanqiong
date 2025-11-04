@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <mutex>
 #include <google/protobuf/service.h>
 
 #include "net/socket.h"

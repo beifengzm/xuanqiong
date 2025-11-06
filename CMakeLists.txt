@@ -11,12 +11,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3 -Wall -Wextra \
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})
 
-# add_executable(protoc_plugin "util/protoc_plugin.cc")
-# target_link_libraries(protoc_plugin
-#     protobuf::libprotoc
-#     protobuf::libprotobuf
-# )
-
 function(gen_proto PROTO_DIR OUT_SRCS OUT_HDRS)
     file(GLOB PROTO_FILES "${CMAKE_SOURCE_DIR}/${PROTO_DIR}/*.proto")
     if(NOT PROTO_FILES)
@@ -66,6 +60,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 set(GTEST_ROOT "${CMAKE_SOURCE_DIR}/third_party/gtest")
 if(EXISTS ${GTEST_ROOT})
     include_directories(${GTEST_ROOT}/include)
+    link_directories(${GTEST_ROOT}/lib)
 endif()
 
 file(GLOB UTIL_SRCS "util/*.cc")
@@ -135,4 +130,13 @@ target_link_libraries(
     sched
     pthread
     protobuf::libprotobuf
+)
+
+add_executable(mpmc_queue_test "test/mpmc_queue_test.cc")
+target_link_libraries(
+    mpmc_queue_test
+    util
+    pthread
+    gtest
+    gtest_main
 )

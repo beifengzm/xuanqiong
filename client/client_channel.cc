@@ -60,12 +60,12 @@ Task ClientChannel::recv_fn() {
             break;
         }
 
+        // deserialize message
+        auto input_stream = socket_->get_input_stream();
+
         while (socket_->read_bytes() < sizeof(uint32_t)) {
             co_await socket_->async_read();
         }
-
-        // deserialize message
-        auto input_stream = socket_->get_input_stream();
 
         // deserialize header
         uint32_t header_len;

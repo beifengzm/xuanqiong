@@ -50,12 +50,12 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
             break;
         }
 
+        // deserialize message
+        auto input_stream = socket->get_input_stream();
+
         while (socket->read_bytes() < sizeof(uint32_t)) {
             co_await socket->async_read();
         }
-
-        // deserialize message
-        auto input_stream = socket->get_input_stream();
 
         // deserialize header
         uint32_t header_len;

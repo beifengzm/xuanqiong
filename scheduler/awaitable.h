@@ -20,6 +20,7 @@ struct RegisterReadAwaiter {
 
 struct ReadAwaiter {
     net::Socket* socket;
+    int read_bytes;
 
     bool await_ready() const noexcept { return false; }
     bool await_suspend(std::coroutine_handle<> handle) noexcept;

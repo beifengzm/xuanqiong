@@ -1,6 +1,7 @@
 #ifdef __linux__
 
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 #include <string.h>
 
 #include "util/common.h"
@@ -12,13 +13,27 @@
 
 namespace xuanqiong {
 
-EpollExecutor::EpollExecutor(int timeout) {
+constexpr static int kTaskQueueCapacity = 4096;
+
+EpollExecutor::EpollExecutor(int timeout) : task_queue_(kTaskQueueCapacity) {
+    int event_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    info("event_fd: {}", event_fd);
+    if (event_fd == -1) {
+        error("eventfd failed: %s", strerror(errno));
+    }
+    dummy_socket_ = std::make_unique<Socket>(event_fd, nullptr, true);
+
     epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
     if (epoll_fd_ == -1) {
         error("epoll_create1 failed: %s", strerror(errno));
     }
     thread_ = std::make_unique<std::thread>([this, timeout]() {
         while (!stop_) {
+            Task task;
+            while (task_queue_.pop(task)) {
+                task();
+            }
+
             struct epoll_event events[MAX_EVENTS];
             int nready = epoll_wait(epoll_fd_, events, MAX_EVENTS, timeout);
             if (nready == -1) {
@@ -30,6 +45,9 @@ EpollExecutor::EpollExecutor(int timeout) {
                 auto socket = reinterpret_cast<net::Socket*>(events[i].data.ptr);
                 if (!socket) {
                     error("socket is null");
+                    continue;
+                }
+                if (socket->is_dummy()) {
                     continue;
                 }
                 if (events[i].events & (EPOLLHUP | EPOLLRDHUP)) {
@@ -72,6 +90,14 @@ EpollExecutor::~EpollExecutor() {
 
 void EpollExecutor::stop() {
     stop_ = true;
+}
+
+bool EpollExecutor::spawn(Task&& task) {
+    if (!task_queue_.push(std::move(task))) {
+        error("task queue is full");
+        return false;
+    }
+    return true;
 }
 
 bool EpollExecutor::register_event(const EventItem& event_item) {

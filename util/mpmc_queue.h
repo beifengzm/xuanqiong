@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <atomic>
+#include <assert.h>
 
 #include "util/common.h"
 
@@ -11,14 +12,16 @@ constexpr static int CACHE_LINE = 64;
 
 template<typename T>
 class MPMCQueue {
-    struct alignas(CACHE_LINE) Slot {
-        T value;
-        std::atomic<bool> ready;
-        Slot(): ready(false) {}
+    struct Slot {
+        alignas(CACHE_LINE) T value;
+        std::atomic<bool> ready{false};
     };
 
 public:
     MPMCQueue(int capacity) : capacity_(capacity), data_(capacity) {
+        // capacity must be power of 2
+        assert((capacity_ & (capacity_ - 1)) == 0);
+        mask_ = capacity_ - 1;
     }
     ~MPMCQueue() = default;
 
@@ -28,6 +31,7 @@ public:
 
 private:
     size_t capacity_;
+    const size_t mask_;
     std::vector<Slot> data_;
 
     alignas(CACHE_LINE) std::atomic<size_t> head_{0};

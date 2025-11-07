@@ -17,8 +17,10 @@ namespace xuanqiong::net {
 
 class Socket {
 public:
-    Socket(int fd, Executor* executor);
+    Socket(int fd, Executor* executor, bool dummy = false);
     ~Socket();
+
+    bool is_dummy() const { return dummy_; }
 
     int fd() const { return sockfd_; }
     const std::string& local_addr() const { return local_addr_; }
@@ -38,8 +40,11 @@ public:
         std::coroutine_handle<>::from_address(write_handle_).resume();
     }
 
+    // close socket
     void close() {
-        shutdown(sockfd_, SHUT_WR);
+        if (!dummy_) {
+            shutdown(sockfd_, SHUT_WR);
+        }
         closed_ = true;
     }
 
@@ -65,6 +70,8 @@ public:
     WriteAwaiter async_write();
 
 private:
+    bool dummy_;              // dummy socket
+
     int sockfd_;              // peer socket
     std::string local_addr_;  // local address
     int local_port_;          // local port

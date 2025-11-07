@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "util/mpmc_queue.h"
+#include "util/mpmc_queue.h"
 #include "scheduler/scheduler.h"
 
 namespace xuanqiong {
@@ -12,14 +13,24 @@ struct EventItem;
 
 class EpollExecutor : public Executor {
 public:
-    EpollExecutor(int timeout_ms);
+    // timeout: timeout in milliseconds
+    EpollExecutor(int timeout);
     ~EpollExecutor();
 
     bool register_event(const EventItem& event_item) override;
 
     void stop() override;
 
+    bool spawn(Task&& task) override;
+
 private:
+    // task queue
+    util::MPMCQueue<Task> task_queue_;
+
+    // event notification fd
+    std::atomic<bool> need_notify_{false};
+    std::unique_ptr<Socket> dummy_socket_;
+
     // within a single thread, queue does not require lock
     std::unique_ptr<std::thread> thread_;
     int epoll_fd_;

@@ -24,6 +24,8 @@ struct EventItem {
     net::Socket* socket;
 };
 
+using Task = std::function<void()>;
+
 // one Executor corresponds to one Thread, a group of Coroutines
 class Executor {
 public:
@@ -34,10 +36,7 @@ public:
 
     virtual void stop() = 0;
 
-    template<typename Func, typename... Args>
-    void spawn(Func&& func, Args&&... args) {
-        std::invoke(std::forward<Func>(func), std::forward<Args>(args)...);
-    }
+    virtual bool spawn(Task&& task) = 0;
 };
 
 enum class SchedPolicy : uint8_t {

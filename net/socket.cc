@@ -6,12 +6,15 @@
 
 namespace xuanqiong::net {
 
-Socket::Socket(int fd, Executor* executor) :
+Socket::Socket(int fd, Executor* executor, bool dummy) :
+    dummy_(dummy),
     sockfd_(fd),
     closed_(false),
     executor_(executor),
     read_handle_(nullptr),
     write_handle_(nullptr) {
+    if (dummy_) { return; }
+
     // get local address
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
@@ -31,8 +34,10 @@ Socket::Socket(int fd, Executor* executor) :
 }
 
 Socket::~Socket() {
-    info("close socket: {}", sockfd_);
-    ::close(sockfd_);
+    if (!dummy_) {
+        info("close socket: {}", sockfd_);
+        ::close(sockfd_);
+    }
 }
 
 ReadAwaiter Socket::async_read() {

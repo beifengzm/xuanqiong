@@ -1,7 +1,6 @@
 #ifdef __APPLE__
 
 #include <sys/event.h>
-#include <sys/eventfd.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <string.h>
@@ -24,13 +23,6 @@ KqueueExecutor::KqueueExecutor(int timeout_ms): stop_(false) {
         return;
     }
 
-    int event_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-    if (event_fd == -1) {
-        error("eventfd() failed: %s", strerror(errno));
-        return;
-    }
-    dummy_socket_ = std::make_unique<net::Socket>(event_fd, this, true);
-
     thread_ = std::make_unique<std::thread>([this, timeout_ms]() {
         std::vector<struct kevent> events(MAX_EVENTS);
         while (!stop_) {
@@ -38,7 +30,7 @@ KqueueExecutor::KqueueExecutor(int timeout_ms): stop_(false) {
             auto ptr = timeout_ms == -1 ? nullptr : &timeout;
             int nready = kevent(kq_fd_, nullptr, 0, events.data(), MAX_EVENTS, ptr);
             if (nready == -1) {
-                if (errno == EINTR) continue; // 可选：处理信号中断
+                if (errno == EINTR) continue;
                 error("kevent wait failed: %s", strerror(errno));
                 continue;
             }
@@ -54,7 +46,6 @@ KqueueExecutor::KqueueExecutor(int timeout_ms): stop_(false) {
                 if (ev.flags & EV_EOF) {
                     info("socket fd=%d closed (EV_EOF)", socket->fd());
                     socket->close();
-                    // 删除该 fd 的所有事件（READ 和 WRITE）
                     struct kevent del_ev[2];
                     EV_SET(&del_ev[0], ev.ident, EVFILT_READ,  EV_DELETE, 0, 0, nullptr);
                     EV_SET(&del_ev[1], ev.ident, EVFILT_WRITE, EV_DELETE, 0, 0, nullptr);
@@ -106,7 +97,6 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
 
     switch (event_item.type) {
         case EventType::READ: {
-            // 添加可读事件（边缘触发）
             struct kevent ev;
             EV_SET(&ev, static_cast<uintptr_t>(fd), EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, udata);
             if (kevent(kq_fd_, &ev, 1, nullptr, 0, nullptr) == -1) {
@@ -116,8 +106,6 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
             break;
         }
         case EventType::WRITE: {
-            // 添加可写事件（边缘触发）
-            // 注意：这里不删除 READ，因为通常读写是共存的，但写事件触发后我们会主动删 WRITE
             struct kevent ev;
             EV_SET(&ev, static_cast<uintptr_t>(fd), EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, udata);
             if (kevent(kq_fd_, &ev, 1, nullptr, 0, nullptr) == -1) {
@@ -131,7 +119,6 @@ bool KqueueExecutor::register_event(const EventItem& event_item) {
             struct kevent del_ev[2];
             EV_SET(&del_ev[0], static_cast<uintptr_t>(fd), EVFILT_READ,  EV_DELETE, 0, 0, nullptr);
             EV_SET(&del_ev[1], static_cast<uintptr_t>(fd), EVFILT_WRITE, EV_DELETE, 0, 0, nullptr);
-            // 忽略返回值，即使失败也不影响（fd 可能已关闭）
             kevent(kq_fd_, del_ev, 2, nullptr, 0, nullptr);
             break;
         }

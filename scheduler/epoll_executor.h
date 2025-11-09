@@ -30,7 +30,7 @@ private:
     // task queue
     util::MPMCQueue<Task> task_queue_;
 
-    // event notification fd
+    // for event notification
     std::atomic<bool> need_notify_{false};
     std::unique_ptr<net::Socket> dummy_socket_;
 

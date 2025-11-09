@@ -16,17 +16,25 @@ namespace xuanqiong {
 constexpr static int kTaskQueueCapacity = 4096;
 
 EpollExecutor::EpollExecutor(int timeout) : task_queue_(kTaskQueueCapacity) {
+    epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
+    if (epoll_fd_ == -1) {
+        error("epoll_create1 failed: %s", strerror(errno));
+    }
+
     int event_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
     info("event_fd: {}", event_fd);
     if (event_fd == -1) {
         error("eventfd failed: %s", strerror(errno));
     }
-    dummy_socket_ = std::make_unique<Socket>(event_fd, nullptr, true);
-
-    epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
-    if (epoll_fd_ == -1) {
-        error("epoll_create1 failed: %s", strerror(errno));
+    dummy_socket_ = std::make_unique<net::Socket>(event_fd, nullptr, true);
+    // add event_fd to epoll
+    struct epoll_event ev;
+    ev.data.ptr = dummy_socket_.get();
+    ev.events = EPOLLIN | EPOLLET;
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, event_fd, &ev) == -1) {
+        error("epoll_ctl failed: %s", strerror(errno));
     }
+
     thread_ = std::make_unique<std::thread>([this, timeout]() {
         while (!stop_) {
             Task task;

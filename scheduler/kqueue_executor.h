@@ -3,6 +3,7 @@
 #include <thread>
 #include <memory>
 
+#include "util/mpmc_queue.h"
 #include "scheduler/scheduler.h"
 
 namespace xuanqiong {
@@ -16,7 +17,15 @@ public:
 
     void stop() override;
 
+    bool spawn(Task&& task) override;
+
 private:
+    // task queue
+    util::MPMCQueue<Task> task_queue_;
+
+    // event notification fd
+    std::atomic<bool> need_notify_{false};
+
     std::unique_ptr<std::thread> thread_;
     int kq_fd_;
     bool stop_;

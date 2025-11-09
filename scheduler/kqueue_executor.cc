@@ -1,6 +1,7 @@
 #ifdef __APPLE__
 
 #include <sys/event.h>
+#include <sys/eventfd.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <string.h>
@@ -22,6 +23,13 @@ KqueueExecutor::KqueueExecutor(int timeout_ms): stop_(false) {
         error("kqueue() failed: %s", strerror(errno));
         return;
     }
+
+    int event_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    if (event_fd == -1) {
+        error("eventfd() failed: %s", strerror(errno));
+        return;
+    }
+    dummy_socket_ = std::make_unique<net::Socket>(event_fd, this, true);
 
     thread_ = std::make_unique<std::thread>([this, timeout_ms]() {
         std::vector<struct kevent> events(MAX_EVENTS);
@@ -79,6 +87,16 @@ KqueueExecutor::~KqueueExecutor() {
     if (kq_fd_ != -1) {
         ::close(kq_fd_);
         kq_fd_ = -1;
+    }
+}
+
+bool KqueueExecutor::spawn(Task&& task) {
+    if (!task_queue_.push(std::move(task))) {
+        error("failed to push task to queue");
+        return false;
+    }
+    if (need_notify_.compare_exchange_strong(true, false)) {
+        dummy_socket_->resume_read();
     }
 }
 

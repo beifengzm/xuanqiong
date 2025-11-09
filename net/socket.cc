@@ -34,10 +34,8 @@ Socket::Socket(int fd, Executor* executor, bool dummy) :
 }
 
 Socket::~Socket() {
-    if (!dummy_) {
-        info("close socket: {}", sockfd_);
-        ::close(sockfd_);
-    }
+    info("close socket: {}", sockfd_);
+    ::close(sockfd_);
 }
 
 ReadAwaiter Socket::async_read() {

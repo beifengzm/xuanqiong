@@ -10,6 +10,9 @@
 namespace xuanqiong {
 
 struct EventItem;
+namespace net {
+class Socket;
+}
 
 class EpollExecutor : public Executor {
 public:
@@ -29,7 +32,7 @@ private:
 
     // event notification fd
     std::atomic<bool> need_notify_{false};
-    std::unique_ptr<Socket> dummy_socket_;
+    std::unique_ptr<net::Socket> dummy_socket_;
 
     // within a single thread, queue does not require lock
     std::unique_ptr<std::thread> thread_;

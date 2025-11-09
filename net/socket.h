@@ -70,7 +70,7 @@ public:
     WriteAwaiter async_write();
 
 private:
-    bool dummy_;              // dummy socket
+    bool dummy_;              // dummy socket, for event notification
 
     int sockfd_;              // peer socket
     std::string local_addr_;  // local address

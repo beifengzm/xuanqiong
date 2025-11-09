@@ -86,7 +86,7 @@ bool KqueueExecutor::spawn(Task&& task) {
         error("failed to push task to queue");
         return false;
     }
-    if (need_notify_.compare_exchange_strong(true, false)) {
+    if (need_notify_.compare_exchange_strong(true, false, std::memory_order_release)) {
         dummy_socket_->resume_read();
     }
 }

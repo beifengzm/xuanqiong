@@ -12,6 +12,8 @@ namespace net {
 class Socket;
 }
 
+using Closure = std::function<void()>;
+
 enum struct EventType : uint8_t {
     READ,
     WRITE,
@@ -24,8 +26,6 @@ struct EventItem {
     net::Socket* socket;
 };
 
-using Task = std::function<void()>;
-
 // one Executor corresponds to one Thread, a group of Coroutines
 class Executor {
 public:
@@ -36,7 +36,7 @@ public:
 
     virtual void stop() = 0;
 
-    virtual bool spawn(Task&& task) = 0;
+    virtual bool spawn(Closure&& task) = 0;
 };
 
 enum class SchedPolicy : uint8_t {

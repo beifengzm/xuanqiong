@@ -32,8 +32,8 @@ void RpcServer::start() {
         // launch a coroutine
         auto executor = scheduler_->alloc_executor();
         auto socket = std::make_shared<net::Socket>(connfd, executor);
-        executor->spawn(&RpcServer::send_fn, this, socket);
-        executor->spawn(&RpcServer::recv_fn, this, socket);
+        executor->spawn([this, socket]() { send_fn(socket); });
+        executor->spawn([this, socket]() { recv_fn(socket); });
     }
 }
 

@@ -18,10 +18,10 @@ class MPMCQueue {
     };
 
 public:
-    MPMCQueue(int capacity) : capacity_(capacity), data_(capacity) {
+    MPMCQueue(int capacity)
+        : capacity_(capacity), mask_(capacity - 1), data_(capacity) {
         // capacity must be power of 2
-        assert((capacity_ & (capacity_ - 1)) == 0);
-        mask_ = capacity_ - 1;
+        assert((capacity & (capacity - 1)) == 0);
     }
     ~MPMCQueue() = default;
 
@@ -30,7 +30,7 @@ public:
     bool pop(T& value);
 
 private:
-    size_t capacity_;
+    const size_t capacity_;
     const size_t mask_;
     std::vector<Slot> data_;
 

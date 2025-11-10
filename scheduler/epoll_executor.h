@@ -13,6 +13,9 @@ struct EventItem;
 namespace net {
 class Socket;
 }
+namespace util{
+class Closure;
+}
 
 class EpollExecutor : public Executor {
 public:
@@ -24,11 +27,11 @@ public:
 
     void stop() override;
 
-    bool spawn(Task&& task) override;
+    bool spawn(Closure&& task) override;
 
 private:
     // task queue
-    util::MPMCQueue<Task> task_queue_;
+    util::MPMCQueue<Closure> task_queue_;
 
     // for event notification
     std::atomic<bool> need_notify_{false};

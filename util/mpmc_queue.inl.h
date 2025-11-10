@@ -8,7 +8,7 @@ bool MPMCQueue<T>::push(auto&& value) {
         }
         if (tail_.compare_exchange_weak(tail, tail + 1,
                     std::memory_order_release, std::memory_order_relaxed)) {
-            auto& slot = data_[tail % capacity_];
+            auto& slot = data_[tail & mask_];
             while (slot.ready.load(std::memory_order_relaxed)) {
                 std::this_thread::yield();
             }
@@ -29,7 +29,7 @@ bool MPMCQueue<T>::pop(T& value) {
         }
         if (head_.compare_exchange_weak(head, head + 1,
                     std::memory_order_acquire, std::memory_order_relaxed)) {
-            auto& slot = data_[head % capacity_];
+            auto& slot = data_[head & mask_];
             while (!slot.ready.load(std::memory_order_acquire)) {
                 std::this_thread::yield();
             }

@@ -41,8 +41,9 @@ ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor
     net::SocketUtils::setsocketopt(sockfd, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger));
 
     // start recv and send coroutine
-    executor->spawn(&ClientChannel::send_fn, this);
-    executor->spawn(&ClientChannel::recv_fn, this);
+    // executor->spawn([this]() { send_fn(); });
+    send_fn();
+    executor->spawn([this]() { recv_fn(); });
 }
 
 void ClientChannel::close() {

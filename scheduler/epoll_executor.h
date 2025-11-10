@@ -13,9 +13,6 @@ struct EventItem;
 namespace net {
 class Socket;
 }
-namespace util{
-class Closure;
-}
 
 class EpollExecutor : public Executor {
 public:

@@ -44,38 +44,37 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
     co_await RegisterReadAwaiter{socket.get()};
 
     while (true) {
-        if (socket->closed()) {
-            socket->resume_write();
-            info("connection closed by peer: {}:{}", socket->peer_addr(), socket->peer_port());
-            break;
-        }
-
         // deserialize message
         auto input_stream = socket->get_input_stream();
 
-        while (socket->read_bytes() < sizeof(uint32_t)) {
+        // deserialize header
+        // fetch header len
+        while (socket->read_bytes() < sizeof(uint32_t) && !socket->closed()) {
             co_await socket->async_read();
         }
-
-        // deserialize header
+        if (socket->closed() && socket->read_bytes() < sizeof(uint32_t)) {
+            break;
+        }
         uint32_t header_len;
         info("read {} bytes, read header sizeof(uint32_t) is 4", socket->read_bytes());
         if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
-            continue;
+            break;
         }
-        info("read {} bytes, header_len: {}", socket->read_bytes(), header_len);
-        while (socket->read_bytes() < header_len) {
+
+        // read header
+        while (socket->read_bytes() < header_len && !socket->closed()) {
             info("read {} bytes, but header_len is {}", socket->read_bytes(), header_len);
             co_await socket->async_read();
         }
-
+        if (socket->closed() && socket->read_bytes() < header_len) {
+            break;
+        }
         proto::Header header;
         input_stream.push_limit(header_len);
         if (!header.ParseFromZeroCopyStream(&input_stream)) {
             error("failed to parse header");
-            exit(1);
-            continue;
+            break;
         }
         input_stream.pop_limit();
         // info("header: {}", header.DebugString());
@@ -83,25 +82,26 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
         // check magic number && version
         if (header.magic() != MAGIC_NUM) {
             error("invalid magic number: 0x{:08x}", header.magic());
-            continue;
+            break;
         }
         if (header.version() != VERSION) {
             error("invalid version: {}", header.version());
-            continue;
+            break;
         }
 
-        // deserialize request
+         // deserialize request
+         // fetch request len
+        while (socket->read_bytes() < sizeof(uint32_t) && !socket->closed()) {
+            co_await socket->async_read();
+        }
+        if (socket->closed() && socket->read_bytes() < sizeof(uint32_t)) {
+            break;
+        }
         uint32_t request_len;
         if (!input_stream.fetch_uint32(&request_len)) {
             error("failed to read request len");
-            continue;
+            break;
         }
-        while (socket->read_bytes() < request_len) {
-            co_await socket->async_read();
-            info("read {} bytes, but request_len is {}", socket->read_bytes(), request_len);
-        }
-
-        // info("read {} bytes, request_len: {}", socket->read_bytes(), request_len);
 
         const auto& service_name = header.service_name();
         const auto& method_name = header.method_name();
@@ -109,22 +109,30 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
         auto iter = name2service_.find(service_name);
         if (iter == name2service_.end()) {
             error("service not found: {}", service_name);
-            continue;
+            break;
         }
         auto service = iter->second;
         auto method = service->GetDescriptor()->FindMethodByName(method_name);
         if (method == nullptr) {
             error("method not found: {}", method_name);
-            continue;
+            break;
         }
 
         std::unique_ptr<google::protobuf::Message> request(service->GetRequestPrototype(method).New());
         std::unique_ptr<google::protobuf::Message> response(service->GetResponsePrototype(method).New());
 
+        // read request
+        while (socket->read_bytes() < request_len) {
+            co_await socket->async_read();
+            info("read {} bytes, but request_len is {}", socket->read_bytes(), request_len);
+        }
+        if (socket->closed() && socket->read_bytes() < request_len) {
+            break;
+        }
         input_stream.push_limit(request_len);
         if (!request->ParseFromZeroCopyStream(&input_stream)) {
             error("failed to parse request");
-            continue;
+            break;
         }
         input_stream.pop_limit();
         // info("request: {}", request->DebugString());
@@ -151,6 +159,12 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
 
         socket->resume_write();
     }
+
+    socket->resume_write();
+    if (!socket->closed()) {
+        socket->close();
+    }
+    info("connection closed by peer: {}:{}", socket->peer_addr(), socket->peer_port());
 }
 
 Task RpcServer::send_fn(std::shared_ptr<net::Socket> socket) {

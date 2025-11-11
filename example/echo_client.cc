@@ -24,13 +24,13 @@ int main() {
 
     std::string data("echo request");
     for (int i = 0; i <= 1000; ++i) {
-        EchoRequest request;
-        request.set_message(data.data() + std::to_string(i));
         EchoService_Stub stub(&channel);
+        auto request = new EchoRequest;
+        request->set_message(data.data() + std::to_string(i));
         auto response = new EchoResponse;
-        RpcController controller;
+        auto controller = new RpcController;
         auto done = google::protobuf::NewCallback(handle_response, response);
-        stub.Echo1(&controller, &request, response, done);
+        stub.Echo1(controller, request, response, done);
         // std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     std::this_thread::sleep_for(std::chrono::seconds(5));

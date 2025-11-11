@@ -52,10 +52,6 @@ bool InputBuffer::fetch_uint32(uint32_t* value) {
     }
     consumed_bytes_ += sizeof(int32_t);
     read_bytes_ -= sizeof(int32_t);
-    if (*value > 1000) {
-        error("invalid uint32_t value: {}", *value);
-        exit(1);
-    }
     return true;
 }
 

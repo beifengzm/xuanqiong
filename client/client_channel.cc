@@ -10,7 +10,8 @@
 
 namespace xuanqiong {
 
-ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor) {
+ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor)
+    : executor_(executor) {
     int sockfd = net::SocketUtils::socket();
 
     struct sockaddr_in addr;
@@ -41,8 +42,7 @@ ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor
     net::SocketUtils::setsocketopt(sockfd, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger));
 
     // start recv and send coroutine
-    // executor->spawn([this]() { send_fn(); });
-    send_fn();
+    executor->spawn([this]() { send_fn(); });
     executor->spawn([this]() { recv_fn(); });
 }
 
@@ -55,75 +55,71 @@ Task ClientChannel::recv_fn() {
     co_await RegisterReadAwaiter{socket_.get()};
 
     while (true) {
-        if (socket_->closed()) {
-            socket_->resume_write();
-            info("connection closed by peer: {}:{}", socket_->peer_addr(), socket_->peer_port());
-            break;
-        }
-
         // deserialize message
         auto input_stream = socket_->get_input_stream();
 
-        while (socket_->read_bytes() < sizeof(uint32_t)) {
+        // deserialize header
+        // fetch header len
+        while (socket_->read_bytes() < sizeof(uint32_t) && !socket_->closed()) {
             co_await socket_->async_read();
         }
-
-        // deserialize header
+        if (socket_->closed() && socket_->read_bytes() < sizeof(uint32_t)) {
+            break;
+        }
         uint32_t header_len;
         info("read {} bytes, sizeof(header_len) is 4", socket_->read_bytes());
         if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
-            continue;
+            break;
         }
 
-        while (socket_->read_bytes() < header_len) {
+        // read header
+        while (socket_->read_bytes() < header_len && !socket_->closed()) {
             co_await socket_->async_read();
             info("read {} bytes, but header_len is {}", socket_->read_bytes(), header_len);
+        }
+        if (socket_->closed() && socket_->read_bytes() < header_len) {
+            break;
         }
         input_stream.push_limit(header_len);
         proto::Header header;
         if (!header.ParseFromZeroCopyStream(&input_stream)) {
             error("failed to parse header");
-            continue;
+            break;
         }
         input_stream.pop_limit();
         info("header: {}", header.DebugString());
 
-        // check magic number && version
-        if (header.magic() != MAGIC_NUM) {
-            error("invalid magic number: 0x{:08x}", header.magic());
-            continue;
-        }
-        if (header.version() != VERSION) {
-            error("invalid version: {}", header.version());
-            continue;
-        }
-
         // deserialize request
+        // fetch response len
+        while (socket_->read_bytes() < sizeof(uint32_t) && !socket_->closed()) {
+            co_await socket_->async_read();
+        }
+        if (socket_->closed() && socket_->read_bytes() < sizeof(uint32_t)) {
+            break;
+        }
         uint32_t response_len;
         if (!input_stream.fetch_uint32(&response_len)) {
             error("failed to read response len");
             continue;
         }
-        while (socket_->read_bytes() < response_len) {
+
+        // read response
+        while (socket_->read_bytes() < response_len && !socket_->closed()) {
             co_await socket_->async_read();
             info("read {} bytes, but response_len is {}", socket_->read_bytes(), response_len);
         }
-
-        auto request_id = header.request_id();
-        google::protobuf::Message* response = nullptr;
-        google::protobuf::Closure* done = nullptr;
-        {
-            std::lock_guard<std::mutex> lock(map_mutex_);
-
-            auto iter = id2session_.find(request_id);
-            if (iter == id2session_.end()) {
-                error("session not found: {}", request_id);
-                continue;
-            }
-            std::tie(response, done) = iter->second;
-            id2session_.erase(iter);
+        if (socket_->closed() && socket_->read_bytes() < response_len) {
+            break;
         }
+        auto request_id = header.request_id();
+        auto iter = id2session_.find(request_id);
+        if (iter == id2session_.end()) {
+            error("session not found: {}", request_id);
+            continue;
+        }
+        auto [response, done] = iter->second;
+        id2session_.erase(iter);
 
         input_stream.push_limit(response_len);
         if (!response->ParseFromZeroCopyStream(&input_stream)) {
@@ -132,12 +128,23 @@ Task ClientChannel::recv_fn() {
         }
         input_stream.pop_limit();
 
-        done->Run();
+        // handle response
+        if (done) {
+            done->Run();  // delete response in done
+        } else {
+            delete response;
+        }
     }
+
+    if (!socket_->closed()) {
+        socket_->close();
+    }
+    info("connection closed by peer: {}:{}", socket_->peer_addr(), socket_->peer_port());
 }
 
 Task ClientChannel::send_fn() {
     while (!socket_->closed()) {
+        // wait data for write ready
         co_await WaitWriteAwaiter{socket_.get()};
         co_await socket_->async_write();
     }
@@ -150,33 +157,34 @@ void ClientChannel::CallMethod(
     google::protobuf::Message* response,
     google::protobuf::Closure* done
 ) {
-    util::NetOutputStream output_stream = socket_->get_output_stream();
+    auto send_request = [=, this] {
+        util::NetOutputStream output_stream = socket_->get_output_stream();
 
-    // serialize header
-    proto::Header header;
-    header.set_magic(MAGIC_NUM);
-    header.set_version(VERSION);
-    header.set_message_type(proto::MessageType::REQUEST);
-    header.set_request_id(request_id_++);
-    header.set_service_name(method->service()->full_name());
-    header.set_method_name(method->name());
+        // serialize header
+        proto::Header header;
+        header.set_magic(MAGIC_NUM);
+        header.set_version(VERSION);
+        header.set_message_type(proto::MessageType::REQUEST);
+        header.set_request_id(request_id_++);
+        header.set_service_name(method->service()->full_name());
+        header.set_method_name(method->name());
 
-    uint32_t header_len = header.ByteSizeLong();
-    output_stream.append(&header_len, sizeof(header_len));
-    header.SerializeToZeroCopyStream(&output_stream);
+        uint32_t header_len = header.ByteSizeLong();
+        output_stream.append(&header_len, sizeof(header_len));
+        header.SerializeToZeroCopyStream(&output_stream);
 
-    // serialize request
-    uint32_t request_len = request->ByteSizeLong();
-    output_stream.append(&request_len, sizeof(request_len));
-    request->SerializeToZeroCopyStream(&output_stream);
+        // serialize request
+        uint32_t request_len = request->ByteSizeLong();
+        output_stream.append(&request_len, sizeof(request_len));
+        request->SerializeToZeroCopyStream(&output_stream);
 
-    // store response
-    {
-        std::lock_guard<std::mutex> lock(map_mutex_);
+        delete controller;
+        delete request;
+
         id2session_[header.request_id()] = {response, done};
-    }
-
-    socket_->resume_write();
+        socket_->resume_write();
+    };
+    executor_->spawn(std::move(send_request));
 }
 
 } // namespace xuanqiong

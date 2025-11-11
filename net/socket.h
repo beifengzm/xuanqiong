@@ -42,6 +42,7 @@ public:
 
     // close socket
     void close() {
+        if (closed_) { return; }
         if (!dummy_) {
             shutdown(sockfd_, SHUT_WR);
         }

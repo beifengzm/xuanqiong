@@ -39,24 +39,26 @@ Socket::~Socket() {
 }
 
 ReadAwaiter Socket::async_read() {
+    int read_bytes = 0;
     while (true) {
         int n = read_buf_.read_from(sockfd_);
         if (n > 0) {
+            read_bytes += n;
             continue;
         } else if (n == 0) {
             close();
-            return {this};
+            return {this, read_bytes};
         } else {
             // retry
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return {this};
+                return {this, read_bytes};
             }
             if (errno == EINTR) {
                 continue;
             }
             error("read data, errno: {}", errno);
             close();
-            return {this};
+            return {this, read_bytes};
         }
     }
 }

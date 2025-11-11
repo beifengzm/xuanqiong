@@ -15,8 +15,8 @@ namespace xuanqiong {
 
 static constexpr int MAX_EVENTS = 1024;
 
-KqueueExecutor::KqueueExecutor(int timeout_ms)
-    : stop_(false) {
+KqueueExecutor::KqueueExecutor(int timeout)
+    : task_queue_(kTaskQueueCapacity), stop_(false) {
     kq_fd_ = kqueue();
     if (kq_fd_ == -1) {
         error("kqueue() failed: %s", strerror(errno));
@@ -30,7 +30,7 @@ KqueueExecutor::KqueueExecutor(int timeout_ms)
         error("failed to add EVFILT_USER: %s", strerror(errno));
     }
 
-    thread_ = std::make_unique<std::thread>([this, timeout_ms]() {
+    thread_ = std::make_unique<std::thread>([this, timeout]() {
         std::vector<struct kevent> events(MAX_EVENTS);
         while (!stop_) {
             // Process pending tasks first
@@ -44,9 +44,9 @@ KqueueExecutor::KqueueExecutor(int timeout_ms)
 
             struct timespec* timeout_ptr = nullptr;
             struct timespec timeout_spec;
-            if (timeout_ms >= 0) {
-                timeout_spec.tv_sec = timeout_ms / 1000;
-                timeout_spec.tv_nsec = (timeout_ms % 1000) * 1'000'000LL;
+            if (timeout >= 0) {
+                timeout_spec.tv_sec = timeout / 1000;
+                timeout_spec.tv_nsec = (timeout % 1000) * 1'000'000LL;
                 timeout_ptr = &timeout_spec;
             }
 

@@ -13,8 +13,6 @@
 
 namespace xuanqiong {
 
-constexpr static int kTaskQueueCapacity = 4096;
-
 EpollExecutor::EpollExecutor(int timeout) : task_queue_(kTaskQueueCapacity) {
     epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
     if (epoll_fd_ == -1) {

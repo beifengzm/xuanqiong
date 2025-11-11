@@ -10,19 +10,23 @@ namespace xuanqiong {
 
 class KqueueExecutor : public Executor {
 public:
-    KqueueExecutor(int timeout_ms);
+    // timeout: timeout in milliseconds
+    KqueueExecutor(int timeout);
     ~KqueueExecutor();
 
     bool register_event(const EventItem& event_item) override;
+
     void stop() override;
+
     bool spawn(Closure&& task) override;
 
 private:
     static constexpr int kTaskQueueCapacity = 4096;
 
-    util::MPMCQueue<Closure> task_queue_{kTaskQueueCapacity};
+    util::MPMCQueue<Closure> task_queue_;
     std::atomic<bool> need_notify_{true};  // start as true to allow first notify
     std::unique_ptr<std::thread> thread_;
+
     int kq_fd_{-1};
     bool stop_{false};
 

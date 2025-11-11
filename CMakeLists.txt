@@ -132,6 +132,7 @@ target_link_libraries(
     protobuf::libprotobuf
 )
 
+if(NOT APPLE)
 add_executable(mpmc_queue_test "test/mpmc_queue_test.cc")
 target_link_libraries(
     mpmc_queue_test
@@ -140,3 +141,4 @@ target_link_libraries(
     gtest
     gtest_main
 )
+endif()

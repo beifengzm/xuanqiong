@@ -14,21 +14,17 @@ public:
     ~KqueueExecutor();
 
     bool register_event(const EventItem& event_item) override;
-
     void stop() override;
-
-    bool spawn(Task&& task) override;
+    bool spawn(Closure&& task) override;
 
 private:
-    // task queue
-    util::MPMCQueue<Task> task_queue_;
+    static constexpr int kTaskQueueCapacity = 4096;
 
-    // event notification fd
-    std::atomic<bool> need_notify_{false};
-
+    util::MPMCQueue<Closure> task_queue_{kTaskQueueCapacity};
+    std::atomic<bool> need_notify_{true};  // start as true to allow first notify
     std::unique_ptr<std::thread> thread_;
-    int kq_fd_;
-    bool stop_;
+    int kq_fd_{-1};
+    bool stop_{false};
 
     DISALLOW_COPY_AND_ASSIGN(KqueueExecutor);
 };

@@ -40,7 +40,7 @@ EpollExecutor::EpollExecutor(int timeout) : task_queue_(kTaskQueueCapacity) {
                 task();
             }
 
-            need_notify_.store(true, std::memory_order_release);
+            should_notify_.store(true, std::memory_order_release);
             struct epoll_event events[MAX_EVENTS];
             int nready = epoll_wait(epoll_fd_, events, MAX_EVENTS, timeout);
             if (nready == -1) {
@@ -58,7 +58,7 @@ EpollExecutor::EpollExecutor(int timeout) : task_queue_(kTaskQueueCapacity) {
                     uint64_t val;
                     while (read(socket->fd(), &val, sizeof(uint64_t)) > 0);
                     // already awake, no need to notify
-                    need_notify_.store(false, std::memory_order_release);
+                    should_notify_.store(false, std::memory_order_release);
                     continue;
                 }
                 if (events[i].events & (EPOLLHUP | EPOLLRDHUP)) {
@@ -110,7 +110,7 @@ bool EpollExecutor::spawn(Closure&& task) {
     }
     // notify epoll to wake up to execute task
     bool expect = true;
-    if (need_notify_.compare_exchange_strong(expect, false, std::memory_order_release)) {
+    if (should_notify_.compare_exchange_strong(expect, false, std::memory_order_release)) {
         uint64_t val = 1;
         write(dummy_socket_->fd(), &val, sizeof(uint64_t));
     }

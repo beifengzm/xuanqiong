@@ -24,7 +24,7 @@ private:
     static constexpr int kTaskQueueCapacity = 4096;
 
     util::MPMCQueue<Closure> task_queue_;
-    std::atomic<bool> need_notify_{true};  // start as true to allow first notify
+    std::atomic<bool> should_notify_{true};  // start as true to allow first notify
     std::unique_ptr<std::thread> thread_;
 
     int kq_fd_{-1};

@@ -33,7 +33,7 @@ private:
     util::MPMCQueue<Closure> task_queue_;
 
     // for event notification
-    std::atomic<bool> need_notify_{false};
+    std::atomic<bool> should_notify_{false};
     std::unique_ptr<net::Socket> dummy_socket_;
 
     // within a single thread, queue does not require lock

@@ -39,9 +39,6 @@ KqueueExecutor::KqueueExecutor(int timeout)
                 task();
             }
 
-            // Prepare to wait: only notify if queue might have new tasks
-            need_notify_.store(true, std::memory_order_release);
-
             struct timespec* timeout_ptr = nullptr;
             struct timespec timeout_spec;
             if (timeout >= 0) {
@@ -50,6 +47,8 @@ KqueueExecutor::KqueueExecutor(int timeout)
                 timeout_ptr = &timeout_spec;
             }
 
+            // Prepare to wait: only notify if queue might have new tasks
+            should_notify_.store(true, std::memory_order_release);
             int nready = kevent(kq_fd_, nullptr, 0, events.data(), MAX_EVENTS, timeout_ptr);
             if (nready == -1) {
                 if (errno == EINTR) continue;
@@ -63,7 +62,7 @@ KqueueExecutor::KqueueExecutor(int timeout)
 
                 if (ev.filter == EVFILT_USER) {
                     // Task notification: reset flag and continue loop to process tasks
-                    need_notify_.store(false, std::memory_order_release);
+                    should_notify_.store(false, std::memory_order_release);
                     continue;
                 }
 
@@ -127,13 +126,13 @@ bool KqueueExecutor::spawn(Closure&& task) {
 
     // Only notify if we haven't already signaled (to reduce syscalls)
     bool expected = true;
-    if (need_notify_.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
+    if (should_notify_.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
         struct kevent trigger;
         EV_SET(&trigger, 1, EVFILT_USER, 0, NOTE_TRIGGER, 0, nullptr);
         if (kevent(kq_fd_, &trigger, 1, nullptr, 0, nullptr) == -1) {
             error("failed to trigger EVFILT_USER: %s", strerror(errno));
             // Re-arm notify flag on failure so next spawn can try again
-            need_notify_.store(true, std::memory_order_release);
+            should_notify_.store(true, std::memory_order_release);
             return false;
         }
     }

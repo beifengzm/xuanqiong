@@ -16,8 +16,8 @@
 using namespace xuanqiong;
 
 // ============ 压测配置 ============
-constexpr int kConcurrency = 8;           // 并发线程数（建议设为 CPU 核数）
-constexpr int kTotalRequests = 100000;    // 总请求数
+constexpr int kConcurrency = 16;           // 并发线程数（建议设为 CPU 核数）
+constexpr int kTotalRequests = 500000;    // 总请求数
 constexpr bool kRecordLatency = true;     // 是否记录延迟（影响性能，可关闭）
 constexpr const char* kServerAddr = "127.0.0.1";
 constexpr int kServerPort = 8888;
@@ -51,24 +51,23 @@ void handle_response(
 }
 
 // 每个工作线程执行的函数
-void worker_thread(std::unique_ptr<ClientChannel>&& ch, int worker_id) {
-    auto channel = std::move(ch);
+void worker_thread(std::shared_ptr<ClientChannel> channel, int worker_id) {
     EchoService_Stub stub(channel.get());  // 每个线程一个 stub（假设线程安全）
 
     while (true) {
         int idx = g_sent.fetch_add(1);
         if (idx >= kTotalRequests) break;
 
-        EchoRequest request;
-        request.set_message("echo_req_" + std::to_string(idx));
+        auto request = new EchoRequest();
+        request->set_message("echo_req_" + std::to_string(idx));
 
         auto response = new EchoResponse;
-        RpcController controller;
+        auto controller = new RpcController();
 
         auto start_time = std::chrono::steady_clock::now();
         auto done = google::protobuf::NewCallback(&handle_response, response, start_time);
 
-        stub.Echo1(&controller, &request, response, done);
+        stub.Echo(controller, request, response, done);
     }
 }
 
@@ -83,11 +82,13 @@ int main() {
 
     // 启动工作线程
     std::vector<std::thread> workers;
+    std::vector<std::shared_ptr<ClientChannel>> channels;
     auto test_start = std::chrono::steady_clock::now();
 
     for (int i = 0; i < kConcurrency; ++i) {
-        auto ch = std::make_unique<ClientChannel>(kServerAddr, kServerPort, executor);
-        workers.emplace_back(worker_thread, std::move(ch), i);
+        auto ch = std::make_shared<ClientChannel>(kServerAddr, kServerPort, executor);
+        channels.push_back(ch);
+        workers.emplace_back(worker_thread, ch, i);
     }
 
     // 等待所有请求完成（或超时）
@@ -129,6 +130,8 @@ int main() {
         auto p90 = g_latencies[size * 0.90];
         auto p99 = g_latencies[size * 0.99];
         auto p999 = g_latencies[size * 0.999];
+
+        std::cout << "Raw P50 (ns): " << g_latencies[size * 0.50].count() << "\n";
 
         auto to_us = [](auto ns) { return ns.count() / 1000.0; };
 

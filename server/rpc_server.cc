@@ -56,7 +56,7 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Socket> socket) {
             break;
         }
         uint32_t header_len;
-        info("read {} bytes, read header sizeof(uint32_t) is 4", socket->read_bytes());
+        // info("read {} bytes, read header sizeof(uint32_t) is 4", socket->read_bytes());
         if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
             break;

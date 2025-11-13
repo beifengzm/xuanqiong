@@ -56,7 +56,7 @@ KqueueExecutor::KqueueExecutor(int timeout)
                 continue;
             }
 
-            info("kevent wait {} events", nready);
+            // info("kevent wait {} events", nready);
             for (int i = 0; i < nready; ++i) {
                 auto& ev = events[i];
 

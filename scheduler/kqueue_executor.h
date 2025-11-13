@@ -21,7 +21,7 @@ public:
     bool spawn(Closure&& task) override;
 
 private:
-    static constexpr int kTaskQueueCapacity = 4096;
+    static constexpr int kTaskQueueCapacity = 65536 * 64;
 
     util::MPMCQueue<Closure> task_queue_;
     std::atomic<bool> should_notify_{true};  // start as true to allow first notify

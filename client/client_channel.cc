@@ -67,7 +67,7 @@ Task ClientChannel::recv_fn() {
             break;
         }
         uint32_t header_len;
-        info("read {} bytes, sizeof(header_len) is 4", socket_->read_bytes());
+        // info("read {} bytes, sizeof(header_len) is 4", socket_->read_bytes());
         if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
             break;
@@ -88,7 +88,7 @@ Task ClientChannel::recv_fn() {
             break;
         }
         input_stream.pop_limit();
-        info("header: {}", header.DebugString());
+        // info("header: {}", header.DebugString());
 
         // deserialize request
         // fetch response len

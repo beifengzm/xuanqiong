@@ -4,7 +4,6 @@
 #include <memory>
 
 #include "util/mpmc_queue.h"
-#include "util/mpmc_queue.h"
 #include "scheduler/scheduler.h"
 
 namespace xuanqiong {

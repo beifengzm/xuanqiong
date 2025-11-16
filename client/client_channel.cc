@@ -4,6 +4,7 @@
 #include <google/protobuf/io/coded_stream.h>
 
 #include "util/common.h"
+#include "net/socket.h"
 #include "net/socket_utils.h"
 #include "client/client_channel.h"
 #include "proto/message.pb.h"
@@ -45,6 +46,8 @@ ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor
     executor->spawn([this]() { send_fn(); });
     executor->spawn([this]() { recv_fn(); });
 }
+
+ClientChannel::~ClientChannel() = default;
 
 void ClientChannel::close() {
     socket_->close();

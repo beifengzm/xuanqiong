@@ -5,17 +5,20 @@
 #include <mutex>
 #include <google/protobuf/service.h>
 
-#include "net/socket.h"
 #include "scheduler/task.h"
 #include "util/output_stream.h"
 
 namespace xuanqiong {
 
 class Executor;
+namespace net {
+class Socket;
+}
 
 class ClientChannel : public google::protobuf::RpcChannel {
 public:
     ClientChannel(const std::string& ip, int port, Executor* executor);
+    ~ClientChannel();
 
     void close();
 

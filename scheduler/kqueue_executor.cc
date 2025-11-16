@@ -15,8 +15,7 @@ namespace xuanqiong {
 
 static constexpr int MAX_EVENTS = 1024;
 
-KqueueExecutor::KqueueExecutor(int timeout)
-    : task_queue_(kTaskQueueCapacity), stop_(false) {
+KqueueExecutor::KqueueExecutor(int timeout) : stop_(false) {
     kq_fd_ = kqueue();
     if (kq_fd_ == -1) {
         error("kqueue() failed: %s", strerror(errno));

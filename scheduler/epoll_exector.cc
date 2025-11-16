@@ -56,7 +56,7 @@ EpollExecutor::EpollExecutor(int timeout) {
                 }
                 if (socket->is_dummy()) {
                     uint64_t val;
-                    while (read(socket->fd(), &val, sizeof(uint64_t)) > 0);
+                    read(socket->fd(), &val, sizeof(uint64_t));
                     // already awake, no need to notify
                     should_notify_.store(false, std::memory_order_release);
                     continue;

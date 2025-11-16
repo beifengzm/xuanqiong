@@ -8,48 +8,42 @@
 
 // Single Producer, Single Consumer (Basic Functionality)
 TEST(MPMCQueueTest, SingleProducerSingleConsumer) {
-    constexpr int kCapacity = 4;
-    xuanqiong::util::MPMCQueue<int> queue(kCapacity);
+    xuanqiong::util::MPMCQueue<int> queue;
 
     // Push until full
-    EXPECT_TRUE(queue.push(10));
-    EXPECT_TRUE(queue.push(20));
-    EXPECT_TRUE(queue.push(30));
-    EXPECT_TRUE(queue.push(40));
-    EXPECT_FALSE(queue.push(50));  // Full
+    for (int i = 0; i < 1000; ++i) {
+        EXPECT_TRUE(queue.push(i));
+    }
 
     // Pop and validate
     int val;
-    EXPECT_TRUE(queue.pop(val) && val == 10);
-    EXPECT_TRUE(queue.pop(val) && val == 20);
-    EXPECT_TRUE(queue.pop(val) && val == 30);
-    EXPECT_TRUE(queue.pop(val) && val == 40);
+    for (int i = 0; i < 1000; ++i) {
+        EXPECT_TRUE(queue.pop(val) && val == i);
+    }
     EXPECT_FALSE(queue.pop(val));  // Empty
 }
 
 // Non-Trivial Type (std::string)
 TEST(MPMCQueueTest, NonTrivialType_String) {
-    constexpr int kCapacity = 8;
-    xuanqiong::util::MPMCQueue<std::string> queue(kCapacity);
+    xuanqiong::util::MPMCQueue<std::string> queue;
 
-    ASSERT_TRUE(queue.push("Hello"));
-    ASSERT_TRUE(queue.push("MPMC"));
-    ASSERT_TRUE(queue.push("Queue"));
+    for (int i = 0; i < 1000; ++i) {
+        ASSERT_TRUE(queue.push("string_" + std::to_string(i)));
+    }
 
     std::string val;
-    ASSERT_TRUE(queue.pop(val) && val == "Hello");
-    ASSERT_TRUE(queue.pop(val) && val == "MPMC");
-    ASSERT_TRUE(queue.pop(val) && val == "Queue");
+    for (int i = 0; i < 1000; ++i) {
+        ASSERT_TRUE(queue.pop(val) && val == "string_" + std::to_string(i));
+    }
     ASSERT_FALSE(queue.pop(val));  // Empty
 }
 
 // Multiple Producers, Single Consumer
 TEST(MPMCQueueTest, MultipleProducersSingleConsumer) {
-    constexpr int kCapacity = 16;
     constexpr int kNumProducers = 4;
     constexpr int kItemsPerProducer = 1000;
 
-    xuanqiong::util::MPMCQueue<int> queue(kCapacity);
+    xuanqiong::util::MPMCQueue<int> queue;
     std::atomic<int> total_popped{0};
     std::atomic<bool> start{false};
 
@@ -98,12 +92,13 @@ TEST(MPMCQueueTest, MultipleProducersSingleConsumer) {
 
 // Multiple Producers, Multiple Consumers
 TEST(MPMCQueueTest, MultipleProducersMultipleConsumers) {
-    constexpr int kCapacity = 8;  // Small to trigger contention
-    constexpr int kNumProducers = 4;
-    constexpr int kNumConsumers = 4;
+    // constexpr int kNumProducers = 4;
+    // constexpr int kNumConsumers = 4;
+    constexpr int kNumProducers = 1;
+    constexpr int kNumConsumers = 2;
     constexpr int kItemsPerProducer = 10000;
 
-    xuanqiong::util::MPMCQueue<int> queue(kCapacity);
+    xuanqiong::util::MPMCQueue<int> queue;
     std::atomic<int> total_pushed{0};
     std::atomic<int> total_popped{0};
     std::atomic<bool> start{false};
@@ -154,28 +149,12 @@ TEST(MPMCQueueTest, MultipleProducersMultipleConsumers) {
     EXPECT_EQ(total_popped, kNumProducers * kItemsPerProducer);
 }
 
-// Edge Case — Queue Capacity of 1
-TEST(MPMCQueueTest, SingleCapacityQueue) {
-    xuanqiong::util::MPMCQueue<int> queue(1);
-
-    EXPECT_TRUE(queue.push(42));
-    EXPECT_FALSE(queue.push(43));  // Full
-
-    int val;
-    EXPECT_TRUE(queue.pop(val) && val == 42);
-    EXPECT_FALSE(queue.pop(val));  // Empty
-
-    EXPECT_TRUE(queue.push(99));
-    EXPECT_TRUE(queue.pop(val) && val == 99);
-}
-
 TEST(MPMCQueueTest, HighConcurrency_16P_16C) {
-    constexpr int kCapacity = 32;
     constexpr int kNumProducers = 16;
     constexpr int kNumConsumers = 16;
     constexpr int kItemsPerProducer = 5000;
 
-    xuanqiong::util::MPMCQueue<int> queue(kCapacity);
+    xuanqiong::util::MPMCQueue<int> queue;
     std::atomic<int> total_popped{0};
     std::atomic<bool> start{false};
 
@@ -216,10 +195,9 @@ TEST(MPMCQueueTest, HighConcurrency_16P_16C) {
 }
 
 TEST(MPMCQueueTest, PushPopExactMatch) {
-    constexpr int kCapacity = 128;
     constexpr int kTotalItems = 100000;
 
-    xuanqiong::util::MPMCQueue<int> queue(kCapacity);
+    xuanqiong::util::MPMCQueue<int> queue;
     std::atomic<int> popped{0};
 
     std::thread producer([&]() {
@@ -236,7 +214,7 @@ TEST(MPMCQueueTest, PushPopExactMatch) {
             if (queue.pop(val)) {
                 ++popped;
             } else {
-                std::this_thread::yield();
+                // std::this_thread::yield();
             }
         }
     });
@@ -248,11 +226,10 @@ TEST(MPMCQueueTest, PushPopExactMatch) {
 }
 
 TEST(MPMCQueueTest, MessageWithProducerId) {
-    constexpr int kCapacity = 16;
     constexpr int kNumProducers = 4;
     constexpr int kItemsPerProducer = 1000;
 
-    xuanqiong::util::MPMCQueue<std::pair<int, int>> queue(kCapacity);  // (producer_id, seq)
+    xuanqiong::util::MPMCQueue<std::pair<int, int>> queue;  // (producer_id, seq)
     std::atomic<int> total_received{0};
 
     std::vector<std::thread> producers;
@@ -275,8 +252,6 @@ TEST(MPMCQueueTest, MessageWithProducerId) {
                 EXPECT_GE(val.second, 0);
                 EXPECT_LT(val.second, kItemsPerProducer);
                 ++total_received;
-            } else {
-                std::this_thread::yield();
             }
         }
     });
@@ -285,4 +260,64 @@ TEST(MPMCQueueTest, MessageWithProducerId) {
     consumer.join();
 
     EXPECT_EQ(total_received, kNumProducers * kItemsPerProducer);
+}
+
+TEST(MPMCQueueTest, MultiProducerMultiConsumer) {
+    constexpr int num_producers = 16;
+    constexpr int num_consumers = 16;
+    constexpr int items_per_producer = 10000;
+
+    xuanqiong::util::MPMCQueue<int> queue;
+
+    std::atomic<uint64_t> sum{0};
+    std::atomic<int> producers_done{0};
+    std::atomic<int> consumers_should_stop{0};
+
+    std::vector<std::thread> consumers;
+    for (int i = 0; i < num_consumers; ++i) {
+        consumers.emplace_back([&queue, &sum, &producers_done, &consumers_should_stop, num_producers]() {
+            int local_sum = 0;
+            while (true) {
+                int value;
+                if (queue.pop(value)) {
+                    local_sum += value;
+                } else {
+                    if (producers_done.load(std::memory_order_acquire) == num_producers) {
+                        while (queue.pop(value)) {
+                            local_sum += value;
+                        }
+                        break;
+                    }
+                    std::this_thread::yield();
+                }
+            }
+            sum.fetch_add(local_sum, std::memory_order_relaxed);
+        });
+    }
+
+    std::vector<std::thread> producers;
+    for (int i = 0; i < num_producers; ++i) {
+        producers.emplace_back([&queue, i, items_per_producer]() {
+            int base = i * items_per_producer;
+            for (int j = 0; j < items_per_producer; ++j) {
+                while (!queue.push(base + j)) {
+                    std::this_thread::yield();
+                }
+            }
+        });
+    }
+
+    for (auto& t : producers) {
+        t.join();
+    }
+    producers_done.store(num_producers, std::memory_order_release);
+
+    for (auto& t : consumers) {
+        t.join();
+    }
+
+    uint64_t total_items = static_cast<uint64_t>(num_producers) * items_per_producer;
+    uint64_t expected_sum = (total_items - 1) * total_items / 2;
+
+    EXPECT_EQ(sum.load(std::memory_order_relaxed), expected_sum);
 }

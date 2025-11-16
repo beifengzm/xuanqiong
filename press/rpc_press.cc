@@ -16,9 +16,9 @@
 using namespace xuanqiong;
 
 // ============ 压测配置 ============
-constexpr int kConcurrency = 16;           // 并发线程数（建议设为 CPU 核数）
-constexpr int kTotalRequests = 500000;    // 总请求数
-constexpr bool kRecordLatency = true;     // 是否记录延迟（影响性能，可关闭）
+constexpr int kConcurrency = 32;           // 并发线程数（建议设为 CPU 核数）
+constexpr int kTotalRequests = 100000;    // 总请求数
+constexpr bool kRecordLatency = false;     // 是否记录延迟（影响性能，可关闭）
 constexpr const char* kServerAddr = "127.0.0.1";
 constexpr int kServerPort = 8888;
 // =================================
@@ -99,7 +99,7 @@ int main() {
             std::cerr << "Timeout! Only completed " << g_completed << " requests.\n";
             break;
         }
-        std::cout << "Completed: " << g_completed << " / " << kTotalRequests << "\n";
+        // std::cout << "Completed: " << g_completed << " / " << kTotalRequests << "\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 

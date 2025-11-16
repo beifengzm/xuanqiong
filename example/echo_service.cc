@@ -8,7 +8,7 @@ void EchoServiceImpl::Echo(
     ::google::protobuf::Closure* done
 ) {
     std::string message = "[Echo] " + request->message();
-    info("Echo: {}", message);
+    // info("Echo: {}", message);
     response->set_message(message);
 }
 
@@ -19,6 +19,6 @@ void EchoServiceImpl::Echo1(
     ::google::protobuf::Closure* done
 ) {
     std::string message = "[Echo1] " + request->message();
-    info("Echo1: {}", message);
+    // info("Echo1: {}", message);
     response->set_message(message);
 }

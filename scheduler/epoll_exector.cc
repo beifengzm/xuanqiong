@@ -13,7 +13,7 @@
 
 namespace xuanqiong {
 
-EpollExecutor::EpollExecutor(int timeout) : task_queue_(kTaskQueueCapacity) {
+EpollExecutor::EpollExecutor(int timeout) {
     epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
     if (epoll_fd_ == -1) {
         error("epoll_create1 failed: %s", strerror(errno));
@@ -47,7 +47,7 @@ EpollExecutor::EpollExecutor(int timeout) : task_queue_(kTaskQueueCapacity) {
                 error("epoll_wait failed: %s", strerror(errno));
                 continue;
             }
-            error("epoll_wait nready: {}", nready);
+            // error("epoll_wait nready: {}", nready);
             for (int i = 0; i < nready; i++) {
                 auto socket = reinterpret_cast<net::Socket*>(events[i].data.ptr);
                 if (!socket) {

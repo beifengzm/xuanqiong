@@ -5,7 +5,7 @@
 
 namespace xuanqiong::util {
 
-constexpr static int kBlockSize = 13;
+constexpr static int kBlockSize = 8192;
 
 struct BufferBlock {
     int begin = 0;

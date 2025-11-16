@@ -27,8 +27,6 @@ public:
     bool spawn(Closure&& task) override;
 
 private:
-    constexpr static int kTaskQueueCapacity = 4096;
-
     // task queue
     util::MPMCQueue<Closure> task_queue_;
 

@@ -16,10 +16,7 @@ bool ReadAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
         auto executor = socket->executor();
         executor->register_event({EventType::DELETE, socket});
     }
-    if (socket->closed() || read_bytes > 0){
-        return false;
-    }
-    return true;
+    return !socket->closed() && read_bytes <= 0;
 }
 
 void WriteAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {

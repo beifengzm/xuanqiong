@@ -42,7 +42,7 @@ bool MPMCQueue<T>::pop(T& value) {
         if (head_chunk->read_count.load(std::memory_order_acquire) == CHUNK_SIZE
                 && head_chunk->ref_count.load(std::memory_order_acquire) == 0) {
             if (!head_chunk->next.load(std::memory_order_acquire)) continue;
-            if (head_chunk_.compare_exchange_strong(
+            if (head_chunk_.compare_exchange_weak(
                 head_chunk, head_chunk->next.load(std::memory_order_acquire),
                 std::memory_order_release, std::memory_order_relaxed)) {
                 delete head_chunk;
@@ -52,7 +52,7 @@ bool MPMCQueue<T>::pop(T& value) {
 
         head_chunk->ref_count.fetch_add(1, std::memory_order_acquire);
 
-        if (head_index_.compare_exchange_strong(head_idx, head_idx + 1,
+        if (head_index_.compare_exchange_weak(head_idx, head_idx + 1,
                 std::memory_order_acquire, std::memory_order_relaxed)) {
             auto read_idx = head_idx;
             auto read_chunk = head_chunk;

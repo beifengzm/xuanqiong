@@ -4,27 +4,31 @@
 #include <google/protobuf/io/coded_stream.h>
 
 #include "util/common.h"
-#include "net/socket.h"
+#include "net/poll_connection.h"
 #include "net/socket_utils.h"
 #include "client/client_channel.h"
 #include "proto/message.pb.h"
 
 namespace xuanqiong {
 
-ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor)
+ClientChannel::ClientChannel(const ClientOptions& options, Executor* executor)
     : executor_(executor) {
     int sockfd = net::SocketUtils::socket();
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
+    addr.sin_port = htons(options.port);
 
-    net::SocketUtils::inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
+    net::SocketUtils::inet_pton(AF_INET, options.ip.c_str(), &addr.sin_addr);
     net::SocketUtils::connect(sockfd, (struct sockaddr*)&addr, sizeof(addr));
 
     fcntl(sockfd, F_SETFL, O_NONBLOCK | O_CLOEXEC);
 
-    socket_ = std::make_unique<net::Socket>(sockfd, executor);
+    if (options.sched_policy == SchedPolicy::POLL_POLICY) {
+        conn_ = std::make_unique<net::PollConnection>(sockfd, executor);
+    } else {
+        // conn_ = std::make_unique<net::Socket>(sockfd, executor);
+    }
 
     int sendbuf = 512 * 1024;
     net::SocketUtils::setsocketopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sendbuf, sizeof(sendbuf));
@@ -50,38 +54,38 @@ ClientChannel::ClientChannel(const std::string& ip, int port, Executor* executor
 ClientChannel::~ClientChannel() = default;
 
 void ClientChannel::close() {
-    socket_->close();
+    conn_->close();
 }
 
 Task ClientChannel::recv_fn() {
     // register read event
-    co_await RegisterReadAwaiter{socket_.get()};
+    co_await RegisterReadAwaiter{conn_.get()};
 
     while (true) {
         // deserialize message
-        auto input_stream = socket_->get_input_stream();
+        auto input_stream = conn_->get_input_stream();
 
         // deserialize header
         // fetch header len
-        while (socket_->read_bytes() < sizeof(uint32_t) && !socket_->closed()) {
-            co_await socket_->async_read();
+        while (conn_->read_bytes() < sizeof(uint32_t) && !conn_->closed()) {
+            co_await conn_->async_read();
         }
-        if (socket_->closed() && socket_->read_bytes() < sizeof(uint32_t)) {
+        if (conn_->closed() && conn_->read_bytes() < sizeof(uint32_t)) {
             break;
         }
         uint32_t header_len;
-        // info("read {} bytes, sizeof(header_len) is 4", socket_->read_bytes());
+        // info("read {} bytes, sizeof(header_len) is 4", conn_->read_bytes());
         if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
             break;
         }
 
         // read header
-        while (socket_->read_bytes() < header_len && !socket_->closed()) {
-            co_await socket_->async_read();
-            info("read {} bytes, but header_len is {}", socket_->read_bytes(), header_len);
+        while (conn_->read_bytes() < header_len && !conn_->closed()) {
+            co_await conn_->async_read();
+            info("read {} bytes, but header_len is {}", conn_->read_bytes(), header_len);
         }
-        if (socket_->closed() && socket_->read_bytes() < header_len) {
+        if (conn_->closed() && conn_->read_bytes() < header_len) {
             break;
         }
         input_stream.push_limit(header_len);
@@ -95,10 +99,10 @@ Task ClientChannel::recv_fn() {
 
         // deserialize request
         // fetch response len
-        while (socket_->read_bytes() < sizeof(uint32_t) && !socket_->closed()) {
-            co_await socket_->async_read();
+        while (conn_->read_bytes() < sizeof(uint32_t) && !conn_->closed()) {
+            co_await conn_->async_read();
         }
-        if (socket_->closed() && socket_->read_bytes() < sizeof(uint32_t)) {
+        if (conn_->closed() && conn_->read_bytes() < sizeof(uint32_t)) {
             break;
         }
         uint32_t response_len;
@@ -108,11 +112,11 @@ Task ClientChannel::recv_fn() {
         }
 
         // read response
-        while (socket_->read_bytes() < response_len && !socket_->closed()) {
-            co_await socket_->async_read();
-            info("read {} bytes, but response_len is {}", socket_->read_bytes(), response_len);
+        while (conn_->read_bytes() < response_len && !conn_->closed()) {
+            co_await conn_->async_read();
+            info("read {} bytes, but response_len is {}", conn_->read_bytes(), response_len);
         }
-        if (socket_->closed() && socket_->read_bytes() < response_len) {
+        if (conn_->closed() && conn_->read_bytes() < response_len) {
             break;
         }
         auto request_id = header.request_id();
@@ -139,17 +143,21 @@ Task ClientChannel::recv_fn() {
         }
     }
 
-    if (!socket_->closed()) {
-        socket_->close();
+    if (!conn_->closed()) {
+        conn_->close();
     }
-    info("connection closed by peer: {}:{}", socket_->peer_addr(), socket_->peer_port());
+
+    info(
+        "connection closed by peer: {}:{}",
+        conn_->socket()->peer_addr(), conn_->socket()->peer_port()
+    );
 }
 
 Task ClientChannel::send_fn() {
-    while (!socket_->closed()) {
+    while (!conn_->closed()) {
         // wait data for write ready
-        co_await WaitWriteAwaiter{socket_.get()};
-        co_await socket_->async_write();
+        co_await WaitWriteAwaiter{conn_.get()};
+        co_await conn_->async_write();
     }
 }
 
@@ -161,7 +169,7 @@ void ClientChannel::CallMethod(
     google::protobuf::Closure* done
 ) {
     auto send_request = [=, this] {
-        util::NetOutputStream output_stream = socket_->get_output_stream();
+        util::NetOutputStream output_stream = conn_->get_output_stream();
 
         // serialize header
         proto::Header header;
@@ -185,7 +193,7 @@ void ClientChannel::CallMethod(
         delete request;
 
         id2session_[header.request_id()] = {response, done};
-        socket_->resume_write();
+        conn_->resume_write();
     };
     executor_->spawn(std::move(send_request));
 }

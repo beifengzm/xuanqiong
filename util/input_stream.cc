@@ -18,9 +18,11 @@ InputBuffer::~InputBuffer() {
     }
 }
 
-int InputBuffer::read_from(int fd) {
-    int nread = ::read(fd, last_block_->data + last_block_->end,
-        kBlockSize - last_block_->end);
+std::pair<uint8_t*, int> InputBuffer::get_buffer() {
+    return {last_block_->data + last_block_->end, kBlockSize - last_block_->end};
+}
+
+void InputBuffer::recv_add(int nread) {
     if (nread > 0) {
         last_block_->end += nread;
         read_bytes_ += nread;
@@ -30,7 +32,6 @@ int InputBuffer::read_from(int fd) {
             last_block_ = last_block_->next;
         }
     }
-    return nread;
 }
 
 bool InputBuffer::fetch_uint32(uint32_t* value) {

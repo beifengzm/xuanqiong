@@ -1,5 +1,4 @@
 #include <unistd.h>
-#include <sys/uio.h>
 #include <vector>
 
 #include "util/output_stream.h"
@@ -56,21 +55,18 @@ void OutputBuffer::append(const void* data, int size) {
     }
 }
 
-int OutputBuffer::write_to(int fd) {
+std::vector<iovec> OutputBuffer::get_iovecs() {
     std::vector<iovec> iovs;
     for (auto block = cur_block_; block && iovs.size() < IOV_MAX; block = block->next) {
         void* data = block->data + block->begin;
         size_t size = size_t(block->end - block->begin);
         iovs.emplace_back(data, size);
-        // info("[write_to] iovs[{}] = {{ {}, {} }}", iovs.size() - 1, data, size);
     }
+    return iovs;
+}
 
-    // use writev to reduce syscall
-    int nwrite = writev(fd, iovs.data(), iovs.size());
-    if (nwrite <= 0) {
-        return nwrite;
-    }
-
+void OutputBuffer::write_add(int nwrite) {
+    if (nwrite <= 0) return;
     int left = nwrite;
     to_write_bytes_ -= nwrite;
     while (left > 0) {
@@ -87,8 +83,6 @@ int OutputBuffer::write_to(int fd) {
             cur_block_ = next_block;
         }
     }
-
-    return nwrite;
 }
 
 } // namespace xuanqiong::util

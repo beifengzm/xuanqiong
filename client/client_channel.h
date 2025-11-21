@@ -6,18 +6,25 @@
 #include <google/protobuf/service.h>
 
 #include "scheduler/task.h"
+#include "scheduler/scheduler.h"
 #include "util/output_stream.h"
 
 namespace xuanqiong {
 
 class Executor;
 namespace net {
-class Socket;
+class Connection;
 }
+
+struct ClientOptions {
+    std::string ip;
+    int port;
+    SchedPolicy sched_policy = SchedPolicy::POLL_POLICY;
+};
 
 class ClientChannel : public google::protobuf::RpcChannel {
 public:
-    ClientChannel(const std::string& ip, int port, Executor* executor);
+    ClientChannel(const ClientOptions& options, Executor* executor);
     ~ClientChannel();
 
     void close();
@@ -34,7 +41,7 @@ public:
     ) override;
 
 private:
-    std::unique_ptr<net::Socket> socket_;
+    std::unique_ptr<net::Connection> conn_;
     using Session = std::pair<google::protobuf::Message*, google::protobuf::Closure*>;
     std::unordered_map<int64_t, Session> id2session_;
 

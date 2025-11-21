@@ -6,15 +6,7 @@
 
 namespace xuanqiong::net {
 
-Socket::Socket(int fd, Executor* executor, bool dummy) :
-    dummy_(dummy),
-    sockfd_(fd),
-    closed_(false),
-    executor_(executor),
-    read_handle_(nullptr),
-    write_handle_(nullptr) {
-    if (dummy_) { return; }
-
+Socket::Socket(int fd) : sockfd_(fd), closed_(false) {
     // get local address
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
@@ -36,56 +28,6 @@ Socket::Socket(int fd, Executor* executor, bool dummy) :
 Socket::~Socket() {
     info("close socket: {}", sockfd_);
     ::close(sockfd_);
-}
-
-ReadAwaiter Socket::async_read() {
-    int read_bytes = 0;
-    while (true) {
-        int n = read_buf_.read_from(sockfd_);
-        if (n > 0) {
-            read_bytes += n;
-            continue;
-        } else if (n == 0) {
-            close();
-            return {this, read_bytes};
-        } else {
-            // retry
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return {this, read_bytes};
-            }
-            if (errno == EINTR) {
-                continue;
-            }
-            error("read data, errno: {}", errno);
-            close();
-            return {this, read_bytes};
-        }
-    }
-}
-
-WriteAwaiter Socket::async_write() {
-    int write_remain = write_buf_.bytes();
-    // info("[start] async_write, write_remain: {}", write_remain);
-    while (write_remain > 0) {
-        int n = write_buf_.write_to(sockfd_);
-        if (n >= 0) {
-            write_remain -= n;
-            continue;
-        } else {
-            // retry
-            if (errno == EINTR) {
-                continue;
-            }
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return {this, write_remain};
-            }
-            // other error
-            error("write data, errno: {}", errno);
-            return {this, -1};
-        }
-    }
-    // info("[end] async_write done, write_remain: {}", write_remain);
-    return {this, write_remain};
 }
 
 } // namespace xuanqiong::net

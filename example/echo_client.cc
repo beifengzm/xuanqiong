@@ -20,7 +20,10 @@ int main() {
     SchedulerOptions sched_options(1000, SchedPolicy::POLL_POLICY);
     Scheduler scheduler(sched_options);
     auto executor = scheduler.alloc_executor();
-    ClientChannel channel("127.0.0.1", 8888, executor);
+    ClientOptions client_options;
+    client_options.ip = "127.0.0.1";
+    client_options.port = 8888;
+    ClientChannel channel(client_options, executor);
 
     std::string data("echo request");
     for (int i = 0; i <= 1000; ++i) {

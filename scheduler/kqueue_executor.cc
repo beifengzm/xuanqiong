@@ -138,7 +138,7 @@ bool KqueueExecutor::spawn(Closure&& task) {
     return true;
 }
 
-bool KqueueExecutor::register_event(const EventItem& event_item) {
+bool KqueueExecutor::add_event(const EventItem& event_item) {
     int fd = event_item.socket->fd();
     void* udata = event_item.socket;
 

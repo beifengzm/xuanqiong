@@ -12,7 +12,7 @@
 namespace xuanqiong {
 
 namespace net {
-class Socket;
+class Connection;
 }
 
 struct RpcServerOptions {
@@ -42,10 +42,10 @@ public:
     void start();
 
 private:
-    Task recv_fn(std::shared_ptr<net::Socket> socket);
-    Task send_fn(std::shared_ptr<net::Socket> socket);
+    Task recv_fn(std::shared_ptr<net::Connection> conn);
+    Task send_fn(std::shared_ptr<net::Connection> conn);
 
-    std::queue<std::shared_ptr<net::Socket>> send_queue_;
+    std::queue<std::shared_ptr<net::Connection>> send_queue_;
 
     net::Accepter accepter_;
     std::unique_ptr<Scheduler> scheduler_;

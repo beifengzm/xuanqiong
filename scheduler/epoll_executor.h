@@ -10,7 +10,7 @@ namespace xuanqiong {
 
 struct EventItem;
 namespace net {
-class Socket;
+class PollConnection;
 }
 
 class EpollExecutor : public Executor {
@@ -19,7 +19,7 @@ public:
     EpollExecutor(int timeout);
     ~EpollExecutor();
 
-    bool register_event(const EventItem& event_item) override;
+    bool add_event(const EventItem& event_item) override;
 
     void stop() override;
 
@@ -31,7 +31,7 @@ private:
 
     // for event notification
     std::atomic<bool> should_notify_{false};
-    std::unique_ptr<net::Socket> dummy_socket_;
+    std::unique_ptr<net::PollConnection> dummy_conn_;
 
     // within a single thread, queue does not require lock
     std::unique_ptr<std::thread> thread_;

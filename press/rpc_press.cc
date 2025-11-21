@@ -15,10 +15,10 @@
 
 using namespace xuanqiong;
 
-// ============ 压测配置 ============
-constexpr int kConcurrency = 32;           // 并发线程数（建议设为 CPU 核数）
-constexpr int kTotalRequests = 100000;    // 总请求数
-constexpr bool kRecordLatency = false;     // 是否记录延迟（影响性能，可关闭）
+// ============ config ============
+constexpr int kConcurrency = 32;
+constexpr int kTotalRequests = 100000;
+constexpr bool kRecordLatency = false;
 constexpr const char* kServerAddr = "127.0.0.1";
 constexpr int kServerPort = 8888;
 // =================================
@@ -26,11 +26,9 @@ constexpr int kServerPort = 8888;
 std::atomic<int> g_sent{0};
 std::atomic<int> g_completed{0};
 
-// 延迟统计（纳秒）
 std::vector<std::chrono::nanoseconds> g_latencies;
 std::mutex g_latencies_mutex;
 
-// 回调函数：处理响应 + 记录延迟
 void handle_response(
     EchoResponse* response,
     std::chrono::steady_clock::time_point start_time) {
@@ -43,16 +41,14 @@ void handle_response(
         g_latencies.push_back(latency);
     }
 
-    // 注意：压测时不要打印日志！否则严重拖慢性能
     // info("response: {}", response->DebugString());
 
     delete response;
     ++g_completed;
 }
 
-// 每个工作线程执行的函数
 void worker_thread(std::shared_ptr<ClientChannel> channel, int worker_id) {
-    EchoService_Stub stub(channel.get());  // 每个线程一个 stub（假设线程安全）
+    EchoService_Stub stub(channel.get());
 
     while (true) {
         int idx = g_sent.fetch_add(1);
@@ -75,23 +71,23 @@ int main() {
     std::cout << "Starting benchmark: "
               << kTotalRequests << " requests, "
               << kConcurrency << " threads\n";
-    // 初始化调度器和执行器
     SchedulerOptions sched_options(1000, SchedPolicy::POLL_POLICY);
     Scheduler scheduler(sched_options);
     auto executor = scheduler.alloc_executor();
 
-    // 启动工作线程
     std::vector<std::thread> workers;
     std::vector<std::shared_ptr<ClientChannel>> channels;
     auto test_start = std::chrono::steady_clock::now();
 
+    ClientOptions client_options;
+    client_options.ip = kServerAddr;
+    client_options.port = kServerPort;
     for (int i = 0; i < kConcurrency; ++i) {
-        auto ch = std::make_shared<ClientChannel>(kServerAddr, kServerPort, executor);
+        auto ch = std::make_shared<ClientChannel>(client_options, executor);
         channels.push_back(ch);
         workers.emplace_back(worker_thread, ch, i);
     }
 
-    // 等待所有请求完成（或超时）
     constexpr int kMaxWaitSec = 60;
     while (g_completed < kTotalRequests) {
         auto elapsed = std::chrono::steady_clock::now() - test_start;
@@ -108,12 +104,10 @@ int main() {
     std::cout << "--------------\n";
     scheduler.stop();
 
-    // 等待工作线程结束
     for (auto& t : workers) {
         if (t.joinable()) t.join();
     }
 
-    // === 输出结果 ===
     double total_sec = std::chrono::duration<double>(test_end - test_start).count();
     double qps = static_cast<double>(g_completed) / total_sec;
 

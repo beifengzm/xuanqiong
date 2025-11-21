@@ -1,36 +1,36 @@
 #include "awaitable.h"
-#include "net/socket.h"
+#include "net/connection.h"
 
 namespace xuanqiong {
 
 bool RegisterReadAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
-    socket->set_read_handle(handle.address());
-    auto executor = socket->executor();
-    executor->register_event({EventType::READ, socket});
+    conn->set_read_handle(handle.address());
+    auto executor = conn->executor();
+    executor->add_event({EventType::READ, conn});
     return false;
 }
 
 bool ReadAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
-    if (socket->closed()) {
+    if (conn->closed()) {
         // read EOF, connection close, destory coroutine
-        auto executor = socket->executor();
-        executor->register_event({EventType::DELETE, socket});
+        auto executor = conn->executor();
+        executor->add_event({EventType::DELETE, conn});
     }
-    return !socket->closed() && read_bytes <= 0;
+    return !conn->closed() && should_suspend;
 }
 
 void WriteAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
-    socket->set_write_handle(handle.address());
-    auto executor = socket->executor();
-    executor->register_event({EventType::WRITE, socket});
+    conn->set_write_handle(handle.address());
+    auto executor = conn->executor();
+    executor->add_event({EventType::WRITE, conn});
 }
 
 bool WaitWriteAwaiter::await_ready() const noexcept {
-    return socket->closed() || socket->write_bytes() > 0;
+    return conn->closed() || conn->write_bytes() > 0;
 }
 
 void WaitWriteAwaiter::await_suspend(std::coroutine_handle<> handle) noexcept {
-    socket->set_write_handle(handle.address());
+    conn->set_write_handle(handle.address());
 }
 
 } // namespace xuanqiong

@@ -7,6 +7,7 @@
 #include "util/common.h"
 #include "net/socket.h"
 #include "scheduler/scheduler.h"
+#include "net/poll_connection.h"
 #include "scheduler/epoll_executor.h"
 
 #define MAX_EVENTS 1024
@@ -24,10 +25,10 @@ EpollExecutor::EpollExecutor(int timeout) {
     if (event_fd == -1) {
         error("eventfd failed: %s", strerror(errno));
     }
-    dummy_socket_ = std::make_unique<net::Socket>(event_fd, nullptr, true);
+    dummy_conn_ = std::make_unique<net::PollConnection>(event_fd, nullptr, true);
     // add event_fd to epoll
     struct epoll_event ev;
-    ev.data.ptr = dummy_socket_.get();
+    ev.data.ptr = dummy_conn_.get();
     ev.events = EPOLLIN | EPOLLET;
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, event_fd, &ev) == -1) {
         error("epoll_ctl failed: %s", strerror(errno));
@@ -49,22 +50,22 @@ EpollExecutor::EpollExecutor(int timeout) {
             }
             // error("epoll_wait nready: {}", nready);
             for (int i = 0; i < nready; i++) {
-                auto socket = reinterpret_cast<net::Socket*>(events[i].data.ptr);
-                if (!socket) {
-                    error("socket is null");
+                auto conn = static_cast<net::PollConnection*>(events[i].data.ptr);
+                if (!conn) {
+                    error("conn is null");
                     continue;
                 }
-                if (socket->is_dummy()) {
+                if (conn->is_dummy()) {
                     uint64_t val;
-                    read(socket->fd(), &val, sizeof(uint64_t));
+                    read(conn->fd(), &val, sizeof(uint64_t));
                     // already awake, no need to notify
                     should_notify_.store(false, std::memory_order_release);
                     continue;
                 }
                 if (events[i].events & (EPOLLHUP | EPOLLRDHUP)) {
                     // handle error event
-                    socket->close();
-                    if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket->fd(), nullptr) == -1) {
+                    conn->close();
+                    if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn->fd(), nullptr) == -1) {
                         error("epoll_ctl failed: {}", strerror(errno));
                     }
                     continue;
@@ -72,17 +73,17 @@ EpollExecutor::EpollExecutor(int timeout) {
                 if (events[i].events & EPOLLOUT) {
                     // handle write event
                     struct epoll_event ev;
-                    ev.data.ptr = socket;
+                    ev.data.ptr = conn;
                     ev.events = EPOLLIN | EPOLLET;
-                    if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, socket->fd(), &ev) == -1) {
+                    if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn->fd(), &ev) == -1) {
                         error("epoll_ctl failed: {}", strerror(errno));
                         continue;
                     }
-                    socket->resume_write();
+                    conn->resume_write();
                 }
                 if (events[i].events & EPOLLIN) {
                     // handle read event
-                    socket->resume_read();
+                    conn->resume_read();
                 }
             }
         }
@@ -112,31 +113,31 @@ bool EpollExecutor::spawn(Closure&& task) {
     bool expect = true;
     if (should_notify_.compare_exchange_strong(expect, false, std::memory_order_release)) {
         uint64_t val = 1;
-        write(dummy_socket_->fd(), &val, sizeof(uint64_t));
+        write(dummy_conn_->fd(), &val, sizeof(uint64_t));
     }
     return true;
 }
 
-bool EpollExecutor::register_event(const EventItem& event_item) {
+bool EpollExecutor::add_event(const EventItem& event_item) {
     struct epoll_event ev;
-    ev.data.ptr = event_item.socket;
+    ev.data.ptr = event_item.conn;
     switch (event_item.type) {
         case EventType::READ:
             ev.events = EPOLLIN | EPOLLET;  // edge triggered
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, event_item.socket->fd(), &ev) == -1) {
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, event_item.conn->fd(), &ev) == -1) {
                 error("epoll_ctl failed: {}", strerror(errno));
                 return false;
             }
             break;
         case EventType::WRITE:
             ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, event_item.socket->fd(), &ev) == -1) {
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, event_item.conn->fd(), &ev) == -1) {
                 error("epoll_ctl failed: {}", strerror(errno));
                 return false;
             }
             break;
         case EventType::DELETE:
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_item.socket->fd(), nullptr) == -1) {
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_item.conn->fd(), nullptr) == -1) {
                 error("epoll_ctl failed: {}", strerror(errno));
                 return false;
             }

@@ -14,7 +14,7 @@ public:
     KqueueExecutor(int timeout);
     ~KqueueExecutor();
 
-    bool register_event(const EventItem& event_item) override;
+    bool add_event(const EventItem& event_item) override;
 
     void stop() override;
 

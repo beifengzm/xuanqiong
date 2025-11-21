@@ -12,7 +12,9 @@ public:
     InputBuffer();
     ~InputBuffer();
 
-    int read_from(int fd);
+    std::pair<uint8_t*, int> get_buffer();
+    // add received data size in bytes
+    void recv_add(int recv_bytes);
 
     // readable total data size in bytes
     size_t bytes() const { return read_bytes_; }

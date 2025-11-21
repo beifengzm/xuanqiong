@@ -9,7 +9,7 @@
 namespace xuanqiong {
 
 namespace net {
-class Socket;
+class Connection;
 }
 
 using Closure = std::function<void()>;
@@ -23,7 +23,7 @@ enum struct EventType : uint8_t {
 
 struct EventItem {
     EventType type;
-    net::Socket* socket;
+    net::Connection* conn;
 };
 
 // one Executor corresponds to one Thread, a group of Coroutines
@@ -32,7 +32,7 @@ public:
     Executor() = default;
     virtual ~Executor() = default;
 
-    virtual bool register_event(const EventItem& item) = 0;
+    virtual bool add_event(const EventItem& item) = 0;
 
     virtual void stop() = 0;
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <liburing.h>
+
 #include "util/input_stream.h"
 #include "util/output_stream.h"
 #include "net/connection.h"
@@ -10,11 +12,11 @@ class Executor;
 
 namespace xuanqiong::net {
 
-class PollConnection : public Connection {
+class UringConnection : public Connection {
 public:
-    PollConnection(int fd, Executor* executor, bool dummy = false);
+    UringConnection(int fd, Executor* executor, bool dummy = false);
 
-    bool is_dummy() const { return dummy_; }
+    virtual ~UringConnection();
 
     Executor* executor() const override { return executor_; }
 
@@ -25,8 +27,9 @@ public:
 private:
     bool dummy_;              // dummy connection, for event notify
     Executor* executor_;      // coroutine executor
+    io_uring* uring_;        // io_uring instance
 
-    DISALLOW_COPY_AND_ASSIGN(PollConnection);
+    DISALLOW_COPY_AND_ASSIGN(UringConnection);
 };
 
 } // namespace xuanqiong::net

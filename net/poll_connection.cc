@@ -3,10 +3,8 @@
 namespace xuanqiong::net {
 
 PollConnection::PollConnection(int fd, Executor* executor, bool dummy) :
-    Connection(fd), dummy_(dummy), executor_(executor) {
+    Connection(fd, dummy), executor_(executor) {
 }
-
-PollConnection::~PollConnection() = default;
 
 ReadAwaiter PollConnection::async_read() {
     auto [buffer, max_size] = read_buf_.get_buffer();

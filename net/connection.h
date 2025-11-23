@@ -10,8 +10,11 @@ namespace xuanqiong::net {
 
 class Connection {
 public:
-    Connection(int fd) : socket_(std::make_unique<Socket>(fd)) {}
-    ~Connection() = default;
+    Connection(int fd, bool dummy)
+        : is_dummy_(dummy), socket_(std::make_unique<Socket>(fd)) {}
+    virtual ~Connection() = default;
+
+    bool is_dummy() const { return is_dummy_; }
 
     virtual ReadAwaiter async_read() = 0;
     virtual WriteAwaiter async_write() = 0;
@@ -21,7 +24,9 @@ public:
     int fd() const { return socket_->fd(); }
     bool closed() const { return socket_->closed(); }
 
-    void close() { socket_->close(); }
+    void close() {
+        socket_->close();
+    }
 
     Socket* socket() const { return socket_.get(); }
 
@@ -35,6 +40,14 @@ public:
     }
     void resume_write() const {
         std::coroutine_handle<>::from_address(write_handle_).resume();
+    }
+
+    void recv_add(int recv_bytes) {
+        read_buf_.recv_add(recv_bytes);
+    }
+
+    void write_add(int write_bytes) {
+        write_buf_.write_add(write_bytes);
     }
 
     size_t read_bytes() const {
@@ -54,6 +67,8 @@ public:
     }
 
 protected:
+    bool is_dummy_;              // dummy connection, for event notify
+
     util::InputBuffer read_buf_;    // read buffer
     util::OutputBuffer write_buf_;   // write buffer
 

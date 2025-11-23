@@ -26,7 +26,7 @@ struct RpcServerOptions {
                      int backlog = 256,
                      bool nodelay = 1,
                      int poll_timeout = -1,
-                     SchedPolicy policy = SchedPolicy::POLL_POLICY)
+                     SchedPolicy policy = SchedPolicy::URING_POLICY)
         : port(port), backlog(backlog), nodelay(nodelay), poll_timeout(poll_timeout), sched_policy(policy) {}
 };
 
@@ -44,6 +44,8 @@ public:
 private:
     Task recv_fn(std::shared_ptr<net::Connection> conn);
     Task send_fn(std::shared_ptr<net::Connection> conn);
+
+    RpcServerOptions options_;
 
     std::queue<std::shared_ptr<net::Connection>> send_queue_;
 

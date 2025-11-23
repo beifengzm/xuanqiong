@@ -7,13 +7,16 @@
 #include "server/rpc_server.h"
 #include "net/socket_utils.h"
 #include "net/poll_connection.h"
+#ifdef __linux__
+#include "net/uring_connection.h"
+#endif
 #include "scheduler/scheduler.h"
 #include "example/echo.pb.h"
 
 namespace xuanqiong {
 
 RpcServer::RpcServer(const RpcServerOptions& options)
-    : accepter_(options.port, options.backlog, options.nodelay) {
+    : options_(options), accepter_(options.port, options.backlog, options.nodelay) {
     auto sched_options = SchedulerOptions(options.poll_timeout, options.sched_policy);
     scheduler_ = std::make_unique<Scheduler>(sched_options);
 }
@@ -31,7 +34,16 @@ void RpcServer::start() {
 
         // launch a coroutine
         auto executor = scheduler_->alloc_executor();
+#ifdef APPLE
         auto conn = std::make_shared<net::PollConnection>(connfd, executor);
+#else
+        std::shared_ptr<net::Connection> conn;
+        if (options_.sched_policy == SchedPolicy::POLL_POLICY) {
+            conn = std::make_shared<net::PollConnection>(connfd, executor);
+        } else {
+            conn = std::make_shared<net::UringConnection>(connfd, executor);
+        }
+#endif
         executor->spawn([this, conn]() { send_fn(conn); });
         executor->spawn([this, conn]() { recv_fn(conn); });
     }

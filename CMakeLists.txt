@@ -99,10 +99,11 @@ target_link_libraries(
     rpc_server
     echo_proto
     message_proto
-    net
     util
     sched
+    net
     pthread
+    uring
     protobuf::libprotobuf
 )
 
@@ -112,10 +113,11 @@ target_link_libraries(
     rpc_client
     echo_proto
     message_proto
-    net
     util
     sched
+    net
     pthread
+    uring
     protobuf::libprotobuf
 )
 
@@ -125,10 +127,11 @@ target_link_libraries(
     rpc_client
     echo_proto
     message_proto
-    net
     util
     sched
+    net
     pthread
+    uring
     protobuf::libprotobuf
 )
 

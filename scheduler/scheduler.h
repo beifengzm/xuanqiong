@@ -45,10 +45,10 @@ enum class SchedPolicy : uint8_t {
 };
 
 struct SchedulerOptions {
-    int poll_timeout;
+    int timeout;
     SchedPolicy policy;
-    SchedulerOptions(int poll_timeout = -1, SchedPolicy policy = SchedPolicy::POLL_POLICY)
-        : poll_timeout(poll_timeout), policy(policy) {}
+    SchedulerOptions(int timeout = -1, SchedPolicy policy = SchedPolicy::POLL_POLICY)
+        : timeout(timeout), policy(policy) {}
 };
 
 // coroutine scheduler

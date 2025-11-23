@@ -63,7 +63,7 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Connection> conn) {
 
         // read header
         while (conn->read_bytes() < header_len && !conn->closed()) {
-            info("read {} bytes, but header_len is {}", conn->read_bytes(), header_len);
+            // info("read {} bytes, but header_len is {}", conn->read_bytes(), header_len);
             co_await conn->async_read();
         }
         if (conn->closed() && conn->read_bytes() < header_len) {
@@ -122,8 +122,8 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Connection> conn) {
 
         // read request
         while (conn->read_bytes() < request_len) {
+            // info("read {} bytes, but request_len is {}", conn->read_bytes(), request_len);
             co_await conn->async_read();
-            info("read {} bytes, but request_len is {}", conn->read_bytes(), request_len);
         }
         if (conn->closed() && conn->read_bytes() < request_len) {
             break;

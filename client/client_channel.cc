@@ -83,7 +83,7 @@ Task ClientChannel::recv_fn() {
         // read header
         while (conn_->read_bytes() < header_len && !conn_->closed()) {
             co_await conn_->async_read();
-            info("read {} bytes, but header_len is {}", conn_->read_bytes(), header_len);
+            // info("read {} bytes, but header_len is {}", conn_->read_bytes(), header_len);
         }
         if (conn_->closed() && conn_->read_bytes() < header_len) {
             break;
@@ -114,7 +114,7 @@ Task ClientChannel::recv_fn() {
         // read response
         while (conn_->read_bytes() < response_len && !conn_->closed()) {
             co_await conn_->async_read();
-            info("read {} bytes, but response_len is {}", conn_->read_bytes(), response_len);
+            // info("read {} bytes, but response_len is {}", conn_->read_bytes(), response_len);
         }
         if (conn_->closed() && conn_->read_bytes() < response_len) {
             break;

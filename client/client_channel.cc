@@ -74,7 +74,6 @@ Task ClientChannel::recv_fn() {
             break;
         }
         uint32_t header_len;
-        // info("read {} bytes, sizeof(header_len) is 4", conn_->read_bytes());
         if (!input_stream.fetch_uint32(&header_len)) {
             error("failed to read header len");
             break;
@@ -146,11 +145,6 @@ Task ClientChannel::recv_fn() {
     if (!conn_->closed()) {
         conn_->close();
     }
-
-    info(
-        "connection closed by peer: {}:{}",
-        conn_->socket()->peer_addr(), conn_->socket()->peer_port()
-    );
 }
 
 Task ClientChannel::send_fn() {

@@ -134,7 +134,6 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Connection> conn) {
 
         // read request
         while (conn->read_bytes() < request_len) {
-            // info("read {} bytes, but request_len is {}", conn->read_bytes(), request_len);
             co_await conn->async_read();
         }
         if (conn->closed() && conn->read_bytes() < request_len) {

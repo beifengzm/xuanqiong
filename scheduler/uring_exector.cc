@@ -17,7 +17,7 @@ namespace xuanqiong {
 UringExecutor::UringExecutor(int timeout) {
     io_uring_queue_init(MAX_RING_LEN, &uring_, 0);
 
-    int event_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    int event_fd = eventfd(0, EFD_CLOEXEC);
     info("event_fd: {}", event_fd);
     if (event_fd == -1) {
         error("eventfd failed: %s", strerror(errno));
@@ -27,48 +27,47 @@ UringExecutor::UringExecutor(int timeout) {
 
     thread_ = std::make_unique<std::thread>([this, timeout]() {
         while (!stop_) {
-            io_uring_submit(&uring_);
-
             Closure task;
             while (task_queue_.pop(task)) {
                 task();
             }
 
-            should_notify_.store(true, std::memory_order_release);
+            io_uring_submit(&uring_);
 
+            should_notify_.store(true, std::memory_order_release);
             io_uring_cqe* cqe;
             if (io_uring_cq_ready(&uring_) == 0) {
                 io_uring_wait_cqe(&uring_, &cqe);
             }
 
             while (io_uring_peek_cqe(&uring_, &cqe) == 0) {
+                io_uring_cqe_seen(&uring_, cqe);
                 auto event_type = static_cast<EventType>(cqe->user_data >> 56);
-                auto conn = reinterpret_cast<net::UringConnection*>(cqe->user_data & ((1ULL << 56) - 1));
+                auto conn_part = cqe->user_data & ((1ULL << 56) - 1);
+                auto conn = reinterpret_cast<net::UringConnection*>(conn_part);
                 if (!conn) {
                     error("conn is null");
                     continue;
                 }
 
                 if (conn->is_dummy()) {
-                    uint64_t val;
-                    read(conn->fd(), &val, sizeof(uint64_t));
                     // already awake, no need to notify
                     should_notify_.store(false, std::memory_order_release);
                     continue;
                 }
-
+                
                 if (event_type == EventType::READ) {
                     if (cqe->res == 0) {
                         conn->close();
                     } else {
                         conn->recv_add(cqe->res);
-                        conn->resume_read();
                     }
-                } else if (event_type == EventType::WRITE) {
-                    conn->write_add(cqe->res);
+                    conn->resume_read();
                 }
-
-                io_uring_cqe_seen(&uring_, cqe);
+                // else if (event_type == EventType::WRITE) {
+                //     info("write fd={}, res={}", conn->fd(), cqe->res);
+                //     conn->write_add(cqe->res);
+                // }
             }
         }
         
@@ -107,6 +106,7 @@ bool UringExecutor::spawn(Closure&& task) {
         io_uring_prep_write(sqe, dummy_conn_->fd(), &val, sizeof(uint64_t), 0);
         sqe->user_data = (static_cast<uint64_t>(EventType::WRITE) << 56)
                 | reinterpret_cast<uint64_t>(dummy_conn_.get());
+        io_uring_submit(&uring_);
     }
     return true;
 }

@@ -16,7 +16,7 @@
 using namespace xuanqiong;
 
 // ============ config ============
-constexpr int kConcurrency = 32;
+constexpr int kConcurrency = 1;
 constexpr int kTotalRequests = 100000;
 constexpr bool kRecordLatency = false;
 constexpr const char* kServerAddr = "127.0.0.1";

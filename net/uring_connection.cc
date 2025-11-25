@@ -28,17 +28,30 @@ ReadAwaiter UringConnection::async_read() {
 }
 
 WriteAwaiter UringConnection::async_write() {
-    auto iovs = write_buf_.get_iovecs();
-
-    auto sqe = io_uring_get_sqe(uring_);
-    if (!sqe) {
-        io_uring_submit(uring_);
-        sqe = io_uring_get_sqe(uring_);
+    int need_write = write_buf_.bytes();
+    int nwrite = 0;
+    while (nwrite < need_write) {
+        auto iovs = write_buf_.get_iovecs();
+        int n = ::writev(fd(), iovs.data(), iovs.size());
+        if (n >= 0) {
+            nwrite += n;
+            continue;
+        } else {
+            // retry
+            if (errno == EINTR) {
+                continue;
+            }
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break;
+            }
+            // other error
+            error("write data, errno: {}", errno);
+            break;
+        }
     }
-    io_uring_prep_writev(sqe, fd(), iovs.data(), iovs.size(), 0);
-    sqe->user_data =
-        (static_cast<uint64_t>(EventType::WRITE) << 56) | reinterpret_cast<uint64_t>(this);
-    return {this, true};
+    write_buf_.write_add(nwrite);
+    bool should_suspend = !closed() && nwrite < need_write;
+    return {this, should_suspend};
 }
 
 } // namespace xuanqiong::net

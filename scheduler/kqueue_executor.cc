@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "util/common.h"
-#include "net/socket.h"
+#include "net/poll_connection.h"
 #include "scheduler/kqueue_executor.h"
 
 namespace xuanqiong {
@@ -65,15 +65,15 @@ KqueueExecutor::KqueueExecutor(int timeout) : stop_(false) {
                     continue;
                 }
 
-                auto socket = static_cast<net::Socket*>(ev.udata);
-                if (!socket) {
-                    error("socket is null in kevent");
+                auto conn = static_cast<net::PollConnection*>(ev.udata);
+                if (!conn) {
+                    error("conn is null in kevent");
                     continue;
                 }
 
                 if (ev.flags & EV_EOF) {
-                    info("socket fd=%d closed (EV_EOF)", socket->fd());
-                    socket->close();
+                    info("conn fd=%d closed (EV_EOF)", conn->fd());
+                    conn->close();
                     // Clean up filters
                     struct kevent del_ev[2];
                     EV_SET(&del_ev[0], ev.ident, EVFILT_READ,  EV_DELETE, 0, 0, nullptr);
@@ -87,9 +87,9 @@ KqueueExecutor::KqueueExecutor(int timeout) : stop_(false) {
                     struct kevent del_ev;
                     EV_SET(&del_ev, ev.ident, EVFILT_WRITE, EV_DELETE, 0, 0, nullptr);
                     kevent(kq_fd_, &del_ev, 1, nullptr, 0, nullptr);
-                    socket->resume_write();
+                    conn->resume_write();
                 } else if (ev.filter == EVFILT_READ) {
-                    socket->resume_read();
+                    conn->resume_read();
                 }
             }
         }
@@ -139,8 +139,8 @@ bool KqueueExecutor::spawn(Closure&& task) {
 }
 
 bool KqueueExecutor::add_event(const EventItem& event_item) {
-    int fd = event_item.socket->fd();
-    void* udata = event_item.socket;
+    int fd = event_item.conn->fd();
+    void* udata = event_item.conn;
 
     switch (event_item.type) {
         case EventType::READ: {

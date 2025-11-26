@@ -103,9 +103,11 @@ target_link_libraries(
     sched
     net
     pthread
-    uring
     protobuf::libprotobuf
 )
+if(NOT APPLE)
+target_link_libraries(rpc_press uring)
+endif()
 
 add_executable(echo_client "example/echo_client.cc")
 target_link_libraries(
@@ -117,9 +119,12 @@ target_link_libraries(
     sched
     net
     pthread
-    uring
     protobuf::libprotobuf
 )
+if(NOT APPLE)
+target_link_libraries(rpc_press uring)
+endif()
+
 
 add_executable(rpc_press "press/rpc_press.cc")
 target_link_libraries(
@@ -131,9 +136,11 @@ target_link_libraries(
     sched
     net
     pthread
-    uring
     protobuf::libprotobuf
 )
+if(NOT APPLE)
+target_link_libraries(rpc_press uring)
+endif()
 
 if(NOT APPLE)
 add_executable(mpmc_queue_test "test/mpmc_queue_test.cc")

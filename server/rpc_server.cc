@@ -34,7 +34,7 @@ void RpcServer::start() {
 
         // launch a coroutine
         auto executor = scheduler_->alloc_executor();
-#ifdef APPLE
+#ifdef __APPLE__
         auto conn = std::make_shared<net::PollConnection>(connfd, executor);
 #else
         std::shared_ptr<net::Connection> conn;

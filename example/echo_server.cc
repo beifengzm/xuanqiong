@@ -5,7 +5,7 @@ using namespace xuanqiong;
 
 int main() {
     RpcServerOptions options(8888);
-    options.sched_policy = SchedPolicy::POLL_POLICY;
+    // options.sched_policy = SchedPolicy::POLL_POLICY;
     RpcServer rpc_server(options);
 
     // register service

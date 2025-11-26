@@ -48,7 +48,6 @@ EpollExecutor::EpollExecutor(int timeout) {
                 error("epoll_wait failed: %s", strerror(errno));
                 continue;
             }
-            // error("epoll_wait nready: {}", nready);
             for (int i = 0; i < nready; i++) {
                 auto conn = static_cast<net::PollConnection*>(events[i].data.ptr);
                 if (!conn) {

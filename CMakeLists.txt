@@ -57,6 +57,7 @@ endfunction()
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+include_directories(${CMAKE_SOURCE_DIR}/third_party)
 set(GTEST_ROOT "${CMAKE_SOURCE_DIR}/third_party/gtest")
 if(EXISTS ${GTEST_ROOT})
     include_directories(${GTEST_ROOT}/include)
@@ -106,7 +107,7 @@ target_link_libraries(
     protobuf::libprotobuf
 )
 if(NOT APPLE)
-target_link_libraries(rpc_press uring)
+target_link_libraries(echo_server uring)
 endif()
 
 add_executable(echo_client "example/echo_client.cc")
@@ -122,7 +123,7 @@ target_link_libraries(
     protobuf::libprotobuf
 )
 if(NOT APPLE)
-target_link_libraries(rpc_press uring)
+target_link_libraries(echo_client uring)
 endif()
 
 

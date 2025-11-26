@@ -14,8 +14,6 @@ class PollConnection : public Connection {
 public:
     PollConnection(int fd, Executor* executor, bool dummy = false);
 
-    bool is_dummy() const { return dummy_; }
-
     Executor* executor() const override { return executor_; }
 
     // async read/write
@@ -23,7 +21,6 @@ public:
     WriteAwaiter async_write() override;
 
 private:
-    bool dummy_;              // dummy connection, for event notify
     Executor* executor_;      // coroutine executor
 
     DISALLOW_COPY_AND_ASSIGN(PollConnection);

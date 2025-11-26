@@ -32,6 +32,7 @@ UringExecutor::UringExecutor(int timeout) {
                 task();
             }
 
+            // info("submit num: {}", io_uring_sq_ready(&uring_));
             io_uring_submit(&uring_);
 
             should_notify_.store(true, std::memory_order_release);
@@ -55,7 +56,7 @@ UringExecutor::UringExecutor(int timeout) {
                     should_notify_.store(false, std::memory_order_release);
                     continue;
                 }
-                
+
                 if (event_type == EventType::READ) {
                     if (cqe->res == 0) {
                         conn->close();

@@ -6,11 +6,16 @@
 namespace xuanqiong::net {
 
 UringConnection::UringConnection(int fd, Executor* executor, bool dummy)
-    : Connection(fd, dummy), executor_(executor) {
+    : Connection(fd, dummy), executor_(executor), back_left_(0) {
     uring_ = static_cast<UringExecutor*>(executor)->uring();
 }
 
 UringConnection::~UringConnection() = default;
+
+void UringConnection::write_add(int nwrite) {
+    back_left_ -= nwrite;
+    Connection::write_add(nwrite);
+}
 
 ReadAwaiter UringConnection::async_read() {
     auto [buffer, max_size] = read_buf_.get_buffer();
@@ -28,32 +33,29 @@ ReadAwaiter UringConnection::async_read() {
 }
 
 WriteAwaiter UringConnection::async_write() {
-    int need_write = write_buf_.bytes();
-    int nwrite = 0;
-    while (nwrite < need_write) {
-        auto iovs = write_buf_.get_iovecs();
-        int n = ::writev(fd(), iovs.data(), iovs.size());
-        if (n >= 0) {
-            nwrite += n;
-            continue;
-        } else {
-            // retry
-            if (errno == EINTR) {
-                continue;
-            }
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                break;
-            }
-            // other error
-            error("write data, errno: {}", errno);
-            break;
-        }
+    // if there are bytes left to back, suspend
+    if (back_left_ > 0) {
+        return {this, true};
     }
-    // if (nwrite == 0) {
-    //     info("[async_write] nwrite: {}, need_write: {}", nwrite, need_write);
-    // }
-    write_buf_.write_add(nwrite);
-    bool should_suspend = !closed() && nwrite < need_write;
+
+    back_left_ = write_buf_.bytes();
+    if (back_left_ == 0) {
+        // no bytes to write, do not suspend
+        return {this, false};
+    }
+
+    write_buf_.get_iovecs().swap(ioves_);
+
+    auto sqe = io_uring_get_sqe(uring_);
+    if (!sqe) {
+        io_uring_submit(uring_);
+        sqe = io_uring_get_sqe(uring_);
+    }
+    io_uring_prep_writev(sqe, fd(), ioves_.data(), ioves_.size(), 0);
+    sqe->user_data =
+        (static_cast<uint64_t>(EventType::WRITE) << 56) | reinterpret_cast<uint64_t>(this);
+
+    bool should_suspend = !closed();
     return {this, should_suspend};
 }
 

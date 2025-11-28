@@ -21,8 +21,8 @@ Socket::Socket(int fd) : sockfd_(fd), closed_(false) {
     peer_addr_ = SocketUtils::inet_ntoa(peer_addr.sin_addr);
     peer_port_ = ntohs(peer_addr.sin_port);
 
-    info("connection: local: {}:{} <-> peer: {}:{}",
-        local_addr_, local_port_, peer_addr_, peer_port_);
+    info("conn [{}]: local: {}:{} <-> peer: {}:{}",
+        sockfd_, local_addr_, local_port_, peer_addr_, peer_port_);
 }
 
 Socket::~Socket() {

@@ -170,14 +170,14 @@ Task RpcServer::recv_fn(std::shared_ptr<net::Connection> conn) {
         conn->resume_write();
     }
 
-    conn->resume_write();
     if (!conn->closed()) {
         conn->close();
     }
     info(
-        "connection closed by peer: {}:{}",
-        conn->socket()->peer_addr(), conn->socket()->peer_port()
+        "connection[{}] closed by peer: {}:{}",
+        conn->fd(), conn->socket()->peer_addr(), conn->socket()->peer_port()
     );
+    info("connection[{}] recv_fn done", conn->fd());
 }
 
 Task RpcServer::send_fn(std::shared_ptr<net::Connection> conn) {
@@ -185,6 +185,7 @@ Task RpcServer::send_fn(std::shared_ptr<net::Connection> conn) {
         co_await WaitWriteAwaiter{conn.get()};
         co_await conn->async_write();
     }
+    info("connection[{}] send_fn done", conn->fd());
 }
 
 } // namespace xuanqiong

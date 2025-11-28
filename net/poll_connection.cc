@@ -32,6 +32,9 @@ ReadAwaiter PollConnection::async_read() {
             break;
         }
     }
+    if (closed()) {
+        resume_write();
+    }
     read_buf_.recv_add(read_bytes);
     bool should_suspend = !closed() && read_bytes <= 0;
     return {this, should_suspend};

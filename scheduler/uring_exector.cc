@@ -41,6 +41,7 @@ UringExecutor::UringExecutor(int timeout) {
                 io_uring_wait_cqe(&uring_, &cqe);
             }
 
+            // info("cq ready: {}", io_uring_cq_ready(&uring_));
             while (io_uring_peek_cqe(&uring_, &cqe) == 0) {
                 io_uring_cqe_seen(&uring_, cqe);
                 auto event_type = static_cast<EventType>(cqe->user_data >> 56);
@@ -51,6 +52,8 @@ UringExecutor::UringExecutor(int timeout) {
                     continue;
                 }
 
+                // info("cqe: fd={}, event_type={}, res={}", conn->fd(), static_cast<int>(event_type), cqe->res);
+
                 if (conn->is_dummy()) {
                     // already awake, no need to notify
                     should_notify_.store(false, std::memory_order_release);
@@ -60,15 +63,17 @@ UringExecutor::UringExecutor(int timeout) {
                 if (event_type == EventType::READ) {
                     if (cqe->res == 0) {
                         conn->close();
+                        if (conn->back_left() == 0) {
+                            conn->resume_write();
+                        }
                     } else {
                         conn->recv_add(cqe->res);
                     }
                     conn->resume_read();
+                } else if (event_type == EventType::WRITE) {
+                    conn->write_add(cqe->res);
+                    conn->resume_write();
                 }
-                // else if (event_type == EventType::WRITE) {
-                //     info("write fd={}, res={}", conn->fd(), cqe->res);
-                //     conn->write_add(cqe->res);
-                // }
             }
         }
         

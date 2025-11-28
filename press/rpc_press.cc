@@ -17,7 +17,7 @@ using namespace xuanqiong;
 
 // ============ config ============
 constexpr int kConcurrency = 32;
-constexpr int kTotalRequests = 500000;
+constexpr int kTotalRequests = 100000;
 constexpr bool kRecordLatency = false;
 constexpr const char* kServerAddr = "127.0.0.1";
 constexpr int kServerPort = 8888;

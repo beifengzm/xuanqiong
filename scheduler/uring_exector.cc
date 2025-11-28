@@ -71,7 +71,7 @@ UringExecutor::UringExecutor(int timeout) {
                     }
                     conn->resume_read();
                 } else if (event_type == EventType::WRITE) {
-                    conn->write_add(cqe->res);
+                    conn->send_add(cqe->res);
                     conn->resume_write();
                 }
             }

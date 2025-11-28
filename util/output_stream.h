@@ -18,7 +18,7 @@ public:
     // write data to fd, use writev
     // int write_to(int fd);
     std::vector<iovec> get_iovecs();
-    void write_add(int write_bytes);
+    void send_add(int send_bytes);
 
     // data size in bytes to write
     size_t bytes() const { return to_write_bytes_; }

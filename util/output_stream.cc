@@ -65,7 +65,7 @@ std::vector<iovec> OutputBuffer::get_iovecs() {
     return iovs;
 }
 
-void OutputBuffer::write_add(int nwrite) {
+void OutputBuffer::send_add(int nwrite) {
     if (nwrite <= 0) return;
     int left = nwrite;
     to_write_bytes_ -= nwrite;

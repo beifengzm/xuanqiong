@@ -20,7 +20,7 @@ public:
 
     Executor* executor() const override { return executor_; }
 
-    void write_add(int n);
+    void send_add(int n);
 
     size_t back_left() const { return back_left_; }
 

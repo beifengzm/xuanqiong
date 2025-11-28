@@ -45,9 +45,9 @@ public:
     void recv_add(int recv_bytes) {
         read_buf_.recv_add(recv_bytes);
     }
-
-    void write_add(int write_bytes) {
-        write_buf_.write_add(write_bytes);
+    // add send data size in bytes
+    void send_add(int send_bytes) {
+        write_buf_.send_add(send_bytes);
     }
 
     size_t read_bytes() const {

@@ -12,9 +12,9 @@ UringConnection::UringConnection(int fd, Executor* executor, bool dummy)
 
 UringConnection::~UringConnection() = default;
 
-void UringConnection::write_add(int nwrite) {
+void UringConnection::send_add(int nwrite) {
     back_left_ -= nwrite;
-    Connection::write_add(nwrite);
+    Connection::send_add(nwrite);
 }
 
 ReadAwaiter UringConnection::async_read() {

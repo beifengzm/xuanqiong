@@ -63,7 +63,7 @@ WriteAwaiter PollConnection::async_write() {
             break;
         }
     }
-    write_buf_.write_add(nwrite);
+    write_buf_.send_add(nwrite);
     bool should_suspend = !closed() && nwrite < need_write;
     return {this, should_suspend};
 }

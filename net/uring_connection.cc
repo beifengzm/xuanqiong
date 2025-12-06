@@ -6,19 +6,21 @@
 namespace xuanqiong::net {
 
 UringConnection::UringConnection(int fd, Executor* executor, bool dummy)
-    : Connection(fd, dummy), executor_(executor), back_left_(0) {
+    : Connection(fd, dummy), executor_(executor), is_writing_(false) {
     uring_ = static_cast<UringExecutor*>(executor)->uring();
 }
 
 UringConnection::~UringConnection() = default;
 
 void UringConnection::send_add(int nwrite) {
-    back_left_ -= nwrite;
+    is_writing_ = false;
     Connection::send_add(nwrite);
 }
 
 ReadAwaiter UringConnection::async_read() {
     auto [buffer, max_size] = read_buf_.get_buffer();
+
+    // info("async_read, max_size: {}", max_size);
 
     auto sqe = io_uring_get_sqe(uring_);
     if (!sqe) {
@@ -34,15 +36,18 @@ ReadAwaiter UringConnection::async_read() {
 
 WriteAwaiter UringConnection::async_write() {
     // if there are bytes left to back, suspend
-    if (back_left_ > 0) {
+    if (is_writing_) {
         return {this, true};
     }
 
-    back_left_ = write_buf_.bytes();
-    if (back_left_ == 0) {
+    if (write_buf_.bytes() == 0) {
         // no bytes to write, do not suspend
         return {this, false};
     }
+
+    is_writing_ = true;
+
+    // info("async_write, bytes: {}", write_buf_.bytes());
 
     write_buf_.get_iovecs().swap(ioves_);
 

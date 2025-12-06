@@ -17,7 +17,7 @@ using namespace xuanqiong;
 
 // ============ config ============
 constexpr int kConcurrency = 32;
-constexpr int kTotalRequests = 100000;
+constexpr int kTotalRequests = 10000;
 constexpr bool kRecordLatency = false;
 constexpr const char* kServerAddr = "127.0.0.1";
 constexpr int kServerPort = 8888;
@@ -95,7 +95,7 @@ int main() {
             std::cerr << "Timeout! Only completed " << g_completed << " requests.\n";
             break;
         }
-        // std::cout << "Completed: " << g_completed << " / " << kTotalRequests << "\n";
+        std::cout << "Completed: " << g_completed << " / " << kTotalRequests << "\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 

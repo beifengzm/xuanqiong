@@ -32,7 +32,12 @@ UringExecutor::UringExecutor(int timeout) {
                 task();
             }
 
-            // info("submit num: {}", io_uring_sq_ready(&uring_));
+            // info("submit num: {}, cq ready: {}", io_uring_sq_ready(&uring_), io_uring_cq_ready(&uring_));
+
+            // int sq_ready = io_uring_sq_ready(&uring_);
+            // if (sq_ready == 0 && io_uring_cq_ready(&uring_) == 0) {
+            //     info("---0 0, sleep {}ms", timeout);
+            // }
             io_uring_submit(&uring_);
 
             should_notify_.store(true, std::memory_order_release);
@@ -52,7 +57,7 @@ UringExecutor::UringExecutor(int timeout) {
                     continue;
                 }
 
-                // info("cqe: fd={}, event_type={}, res={}", conn->fd(), static_cast<int>(event_type), cqe->res);
+                // info("cqe: fd={}, event_type={}, res={}, sq_ready={}, cq_ready={}", conn->fd(), static_cast<int>(event_type), cqe->res, sq_ready, cq_ready);
 
                 if (conn->is_dummy()) {
                     // already awake, no need to notify
@@ -62,8 +67,9 @@ UringExecutor::UringExecutor(int timeout) {
 
                 if (event_type == EventType::READ) {
                     if (cqe->res == 0) {
+                        info("read eof, fd={}", conn->fd());
                         conn->close();
-                        if (conn->back_left() == 0) {
+                        if (!conn->is_writing()) {
                             conn->resume_write();
                         }
                     } else {
